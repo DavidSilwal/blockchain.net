@@ -108,7 +108,18 @@ namespace Blockchain.NET.Blockchain
         public void AddTransaction(Transaction transaction, string publicKey)
         {
             if (transaction.Verify(publicKey))
-                _pendingTransactions.Add(transaction);
+            {
+                using (BlockchainDbContext db = new BlockchainDbContext())
+                {
+                    var inputTransaction = db.Transactions.FirstOrDefault(t => t.Output == transaction.Input);
+
+                    if(inputTransaction != null && inputTransaction.Amount >= transaction.Amount)
+                    {
+                        _pendingTransactions.Add(transaction);
+                    }
+                }
+
+            }
         }
 
         #endregion

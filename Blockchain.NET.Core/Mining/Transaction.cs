@@ -24,10 +24,7 @@ namespace Blockchain.NET.Core.Mining
 
         public string Output { get; set; }
 
-        public Transaction()
-        {
-
-        }
+        public Transaction() { }
 
         public Transaction(string input, string privateKey, string publicKey, decimal amount, string output, byte[] data = null)
         {
@@ -46,7 +43,7 @@ namespace Blockchain.NET.Core.Mining
 
         public bool Verify(string publicKey)
         {
-            return RSAHelper.VerifyData(GenerateHash(), Signature, publicKey) && Address == HashHelper.RIPEMD160(HashHelper.Sha256(publicKey));
+            return RSAHelper.VerifyData(GenerateHash(), Signature, publicKey) && Input == HashHelper.RIPEMD160(HashHelper.Sha256(publicKey));
         }
     }
 }

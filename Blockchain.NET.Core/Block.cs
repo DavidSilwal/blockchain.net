@@ -1,4 +1,5 @@
 ﻿using Blockchain.NET.Core.Helpers;
+using Blockchain.NET.Core.Helpers.Cryptography;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -60,13 +61,14 @@ namespace Blockchain.NET.Core
                 DateTime startTime = DateTime.Now;
 
                 Task[] miningTasks = new Task[Environment.ProcessorCount];
+                var difficultyValue = string.Join("0", new string[difficulty + 1]);
                 for (int i = 0; i < miningTasks.Length; i++)
                 {
                     var startNonce = i;
                     miningTasks[i] = Task.Factory.StartNew(() =>
                     {
                         var taskHash = GenerateHash(startNonce);
-                        while (taskHash.Substring(0, difficulty) != string.Join("0", new string[difficulty + 1]))
+                        while (taskHash.Substring(0, difficulty) != difficultyValue)
                         {
                             if (!_isMining)
                             {

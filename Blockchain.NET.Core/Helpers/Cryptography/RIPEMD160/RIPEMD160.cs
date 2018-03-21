@@ -4,7 +4,7 @@
 
 // Contributed to .NET Foundation by Darren R. Starr - Conscia Norway AS
 
-namespace System.Security.Cryptography
+namespace Blockchain.NET.Core.Helpers.Cryptography.RIPEMD160
 {
     public abstract class RIPEMD160 : System.Security.Cryptography.HashAlgorithm
     {

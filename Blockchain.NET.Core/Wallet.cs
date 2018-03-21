@@ -35,7 +35,17 @@ namespace Blockchain.NET.Core
             {
                 new Wallet(password).Save();
             }
-            return Deserialize(File.ReadAllBytes(Path.Combine(_rootPath, _walletName)), password);
+            var wallet = Deserialize(File.ReadAllBytes(Path.Combine(_rootPath, _walletName)), password);
+            wallet._password = password;
+            return wallet;
+        }
+
+        public Address GetNewAddress()
+        {
+            var newAddress = Address.New();
+            Addresses.Add(newAddress);
+            Save();
+            return newAddress;
         }
     }
 }

@@ -3,7 +3,7 @@ using System;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace Blockchain.NET.Core
+namespace Blockchain.NET.Core.Helpers.Cryptography
 {
     public static class HashHelper
     {
@@ -32,7 +32,7 @@ namespace Blockchain.NET.Core
         public static string RIPEMD160(string password)
         {
             // create a ripemd160 object
-            RIPEMD160 r160 = System.Security.Cryptography.RIPEMD160.Create();
+            var r160 = Blockchain.NET.Core.Helpers.Cryptography.RIPEMD160.RIPEMD160.Create();
             // convert the string to byte
             byte[] myByte = System.Text.Encoding.ASCII.GetBytes(password);
             // compute the byte to RIPEMD160 hash

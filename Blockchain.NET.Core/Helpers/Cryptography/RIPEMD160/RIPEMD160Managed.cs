@@ -15,7 +15,7 @@ using System;
 using System.Linq;
 using System.Text;
 
-namespace System.Security.Cryptography
+namespace Blockchain.NET.Core.Helpers.Cryptography.RIPEMD160
 {
     public class RIPEMD160Managed : RIPEMD160
     {

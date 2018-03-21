@@ -2,8 +2,10 @@
 using Blockchain.NET.Blockchain.Network;
 using Blockchain.NET.Core;
 using Blockchain.NET.Core.Helpers;
+using Blockchain.NET.Core.Helpers.Cryptography;
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -14,19 +16,30 @@ namespace Blockchain.NET.Node
     {
         static void Main(string[] args)
         {
-            var blockChain = new BlockChain("CoreBlocks", 1000, 20);
+            var wallet = Wallet.Load("test123");
+            var blockChain = new BlockChain(wallet);
 
-            blockChain.StartMining();
+            //blockChain.StartMining();
 
-            Console.WriteLine($"The Blockchain is: {(blockChain.IsChainValid() ? "valid" : "invalid")}");
+            var address = wallet.GetNewAddress();
 
+            string toEncode = "test123";
+
+            var encoded = RSAHelper.Encrypt(address.PublicKey, toEncode);
+
+            var signed = RSAHelper.SignData(toEncode, RSAHelper.ToRSAParameters(address.PrivateKey));
+            //signed += "0";
+
+            var verified = RSAHelper.VerifyData(toEncode, signed, RSAHelper.ToRSAParameters(address.PublicKey));
+
+            var decoded = RSAHelper.Decrypt(address.PrivateKey, encoded);
+
+            //Console.WriteLine($"The Blockchain is: {(blockChain.IsChainValid() ? "valid" : "invalid")}");
+
+            Console.ReadLine();
 
             //var keyValuePair = blockChain.CreateKeyPair();
-            //string toEncode = "test";
 
-            //var encoded = blockChain.Encrypt(keyValuePair.Item2, toEncode);
-
-            //var decoded = blockChain.Decrypt(keyValuePair.Item1, encoded);
 
             //var wallet = new Wallet("test123");
             //wallet.Addresses = new List<Address>();
@@ -76,8 +89,6 @@ namespace Blockchain.NET.Node
 
             //    Console.WriteLine(nextBlock);
             //}
-
-            Console.ReadLine();
         }
     }
 }

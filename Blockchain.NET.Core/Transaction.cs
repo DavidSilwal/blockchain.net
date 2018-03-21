@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Blockchain.NET.Core.Helpers.Cryptography;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -14,24 +15,30 @@ namespace Blockchain.NET.Core
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
 
-        public string Signature { get; set; }
+        public string Address { get; set; }
+
+        public string PublicKey { get; set; }
+
+        public byte[] Data { get; set; }
+
+        public decimal Amount { get; set; }
 
         public Transaction()
         {
 
         }
 
-        public Transaction(string[] input, string[] output, decimal amount, decimal confirmationFee)
+        public Transaction(string[] input, string publicKey, decimal amount, byte[] data = null)
         {
-            //Input = input;
-            //Output = output;
-            //Amount = amount;
-            //Signature = GenerateHash();
+            PublicKey = publicKey;
+            Address = HashHelper.RIPEMD160(HashHelper.Sha256(PublicKey));
+            Data = data;
+            Amount = amount;
         }
 
         public string GenerateHash()
         {
-            return HashHelper.Sha256(Signature);
+            return HashHelper.Sha256(PublicKey);
         }
     }
 }

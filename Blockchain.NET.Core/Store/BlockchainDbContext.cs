@@ -28,5 +28,7 @@ namespace Blockchain.NET.Core.Store
         public virtual DbSet<Block> Blocks { get; set; }
 
         public virtual DbSet<Transaction> Transactions { get; set; }
+
+        public virtual DbSet<IO> IOs { get; set; }
     }
 }

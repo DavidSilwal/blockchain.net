@@ -14,4 +14,8 @@
     <ProjectReference Include="..\Blockchain.NET.Core\Blockchain.NET.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Wallet\" />
+  </ItemGroup>
+
 </Project>

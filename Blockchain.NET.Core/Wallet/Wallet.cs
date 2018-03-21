@@ -42,7 +42,7 @@ namespace Blockchain.NET.Core.Wallet
             return wallet;
         }
 
-        public Address GetNewAddress()
+        public Address NewAddress()
         {
             var newAddress = Address.New();
             Addresses.Add(newAddress);
@@ -53,12 +53,15 @@ namespace Blockchain.NET.Core.Wallet
         public decimal GetBalance()
         {
             decimal balance = 0;
-            var walletAddresses = Addresses.Select(a => a.Key).ToList();
-            using (BlockchainDbContext db = new BlockchainDbContext())
-            {
-                balance += db.Transactions.Where(t => walletAddresses.Contains(t.Output)).Select(t => t.Amount).Sum();
-                balance -= db.Transactions.Where(t => walletAddresses.Contains(t.Input)).Select(t => t.Amount).Sum();
-            }
+            //var walletAddresses = Addresses.Select(a => a.Key).ToList();
+            //using (BlockchainDbContext db = new BlockchainDbContext())
+            //{
+            //    foreach(var walletAddress in walletAddresses)
+            //    {
+            //        balance += db.Transactions.Where(t => t.Output.Contains(walletAddress)).Select(t => t.Amount)).Sum();
+            //        balance -= db.Transactions.Where(t => t.Input.Contains(walletAddress)).Select(t => t.Amount).Sum();
+            //    }
+            //}
             return balance;
         }
     }

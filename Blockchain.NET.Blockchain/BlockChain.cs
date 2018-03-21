@@ -70,8 +70,8 @@ namespace Blockchain.NET.Blockchain
                     Block nextBlock = null;
                     lock (_pendingTransactions)
                     {
-                        var miningAddress = Wallet.GetNewAddress();
-                        AddTransaction(new Transaction(null, miningAddress.PrivateKey, miningAddress.PublicKey, MiningReward, miningAddress.Key), miningAddress.PublicKey);
+                        var miningAddress = Wallet.NewAddress();
+                        AddTransaction(new Transaction(null, miningAddress.PrivateKey, miningAddress.PublicKey, MiningReward, new []{ miningAddress.Key }), new[] { miningAddress.PublicKey });
                         nextBlock = new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), _pendingTransactions);
                         _pendingTransactions = new List<Transaction>();
                     }
@@ -105,20 +105,19 @@ namespace Blockchain.NET.Blockchain
             }
         }
 
-        public void AddTransaction(Transaction transaction, string publicKey)
+        public void AddTransaction(Transaction transaction, string[] unlockScripts)
         {
-            if (transaction.Verify(publicKey))
+            if (transaction.Verify(unlockScripts))
             {
                 using (BlockchainDbContext db = new BlockchainDbContext())
                 {
                     var inputTransaction = db.Transactions.FirstOrDefault(t => t.Output == transaction.Input);
 
-                    if(inputTransaction != null && inputTransaction.Amount >= transaction.Amount)
+                    if (inputTransaction != null && inputTransaction.Amount >= transaction.Amount)
                     {
                         _pendingTransactions.Add(transaction);
                     }
                 }
-
             }
         }
 

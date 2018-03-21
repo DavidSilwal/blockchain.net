@@ -22,11 +22,13 @@ namespace Blockchain.NET.Node
             var wallet = Wallet.Load("test123");
             var blockChain = new BlockChain(wallet);
 
-            var foundAddress = wallet.Addresses.FirstOrDefault();
+            //var foundAddress = wallet.Addresses.FirstOrDefault(add => add.Key.Contains("605614"));
 
-            var testTransaction = new Transaction("fac462ef4f07400698c81d920a19f8fcdd75609d", foundAddress.PrivateKey, foundAddress.PublicKey, 10, "fac462ef4f07400698c81d920a19f8fcdd75609d");
+            //var newAddress = wallet.NewAddress();
 
-            blockChain.AddTransaction(testTransaction, foundAddress.PublicKey);
+            //var testTransaction = new Transaction(new[] { newAddress.Key }, newAddress.PrivateKey, newAddress.PublicKey, 10, new[] { "fac462ef4f07400698c81d920a19f8fcdd75609d", wallet.NewAddress().Key });
+
+            //blockChain.AddTransaction(testTransaction, new[] { newAddress.PublicKey });
 
             Console.WriteLine($"Wallet Balance is: {wallet.GetBalance()}");
 

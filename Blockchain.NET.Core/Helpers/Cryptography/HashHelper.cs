@@ -55,5 +55,10 @@ namespace Blockchain.NET.Core.Helpers.Cryptography
             // convert the StringBuilder to String and convert it to lower case and return it.
             return sb.ToString().ToLower();
         }
+
+        public static string GenerateAddress(string publicKey)
+        {
+            return "11x"+RIPEMD160(Sha256(publicKey));
+        }
     }
 }

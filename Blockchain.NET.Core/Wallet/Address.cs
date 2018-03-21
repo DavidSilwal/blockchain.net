@@ -19,7 +19,7 @@ namespace Blockchain.NET.Core.Wallet
             var keyValuePair = RSAHelper.CreateKeyPair();
             newAddress.PrivateKey = keyValuePair.Item1;
             newAddress.PublicKey = keyValuePair.Item2;
-            newAddress.Key = HashHelper.RIPEMD160(HashHelper.Sha256(newAddress.PublicKey));
+            newAddress.Key = HashHelper.GenerateAddress(newAddress.PublicKey);
             return newAddress;
         }
     }

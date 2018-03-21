@@ -26,7 +26,7 @@ namespace Blockchain.NET.Core.Mining
 
         public string MerkleTreeHash { get; set; }
 
-        public List<Transaction> Transactions { get; set; }
+        public virtual ICollection<Transaction> Transactions { get; set; }
 
         private bool _isMining;
 

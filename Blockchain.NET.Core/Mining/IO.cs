@@ -19,6 +19,13 @@ namespace Blockchain.NET.Core.Mining
 
         public Transaction Transaction { get; set; }
 
+        public IO() { }
+
+        public IO(string key)
+        {
+            Key = key;
+        }
+
         public string GenerateHash()
         {
             return HashHelper.Sha256(Key);

@@ -71,7 +71,7 @@ namespace Blockchain.NET.Blockchain
                     lock (_pendingTransactions)
                     {
                         var miningAddress = Wallet.NewAddress();
-                        AddTransaction(new Transaction(null, miningAddress.PrivateKey, miningAddress.PublicKey, MiningReward, new []{ miningAddress.Key }), new[] { miningAddress.PublicKey });
+                        AddTransaction(new Transaction(null, miningAddress.PrivateKey, miningAddress.PublicKey, MiningReward, new[] { new IO(miningAddress.Key) }.ToList()), new[] { miningAddress.PublicKey });
                         nextBlock = new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), _pendingTransactions);
                         _pendingTransactions = new List<Transaction>();
                     }

@@ -17,7 +17,7 @@ namespace Blockchain.NET.Core.Mining
 
         public long BlockHeight { get; set; }
 
-        public List<IO> Inputs { get; set; }
+        public virtual ICollection<IO> Inputs { get; set; }
 
         public string PublicKey { get; set; }
 
@@ -27,32 +27,33 @@ namespace Blockchain.NET.Core.Mining
 
         public byte[] Data { get; set; }
 
-        public string Output { get; set; }
+        public virtual ICollection<IO> Outputs { get; set; }
 
         [ForeignKey(nameof(BlockHeight))]
         public Block Block { get; set; }
 
         public Transaction() { }
 
-        public Transaction(List<IO> inputs, string privateKey, string publicKey, decimal amount, string[] output, byte[] data = null)
+        public Transaction(List<IO> inputs, string privateKey, string publicKey, decimal amount, List<IO> outputs, byte[] data = null)
         {
             Inputs = inputs;
             PublicKey = publicKey;
             Amount = amount;
             Data = data;
-            Output = string.Join(",", output);
+            Outputs = outputs;
             Signature = RSAHelper.SignData(GenerateHash(), privateKey);
         }
 
         public string GenerateHash()
         {
-            var inputsHash = HashHelper.Sha256(string Inputs.Select(i => i.GenerateHash())
-            return HashHelper.Sha256( + Amount + HashHelper.Sha256(Data) + Output);
+            var inputsHash = HashHelper.Sha256(string.Join("", Inputs.Select(i => i.GenerateHash())));
+            var outputsHash = HashHelper.Sha256(string.Join("", Outputs.Select(i => i.GenerateHash())));
+            return HashHelper.Sha256(inputsHash + Amount + HashHelper.Sha256(Data) + outputsHash);
         }
 
         public bool Verify(string[] unlockScripts)
         {
-            var inputList = string.IsNullOrEmpty(Input) ? new List<string>() : Input.Split(',').OrderBy(s => s).ToList();
+            var inputList = Inputs.Select(i => i.Key).OrderBy(i => i).ToList();
             var unlockScriptsList = unlockScripts.Select(s => HashHelper.GenerateAddress(PublicKey)).OrderBy(s => s).ToList();
             return RSAHelper.VerifyData(GenerateHash(), Signature, PublicKey) && inputList.SequenceEqual(unlockScriptsList);
         }

@@ -111,7 +111,7 @@ namespace Blockchain.NET.Blockchain
             {
                 using (BlockchainDbContext db = new BlockchainDbContext())
                 {
-                    var inputTransaction = db.Transactions.FirstOrDefault(t => t.Output == transaction.Input);
+                    var inputTransactions = db.Transactions.Where(t => t.Inputs.Select(i => i.Key).Contains());
 
                     if (inputTransaction != null && inputTransaction.Amount >= transaction.Amount)
                     {

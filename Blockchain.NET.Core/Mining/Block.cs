@@ -9,7 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Blockchain.NET.Core
+namespace Blockchain.NET.Core.Mining
 {
     public class Block
     {

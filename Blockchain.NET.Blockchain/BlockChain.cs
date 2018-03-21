@@ -1,7 +1,9 @@
 ﻿using Blockchain.NET.Blockchain.Network;
-using Blockchain.NET.Blockchain.Store;
 using Blockchain.NET.Core;
 using Blockchain.NET.Core.Helpers;
+using Blockchain.NET.Core.Mining;
+using Blockchain.NET.Core.Store;
+using Blockchain.NET.Core.Wallet;
 using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using System;
@@ -17,7 +19,6 @@ namespace Blockchain.NET.Blockchain
     public class BlockChain
     {
         public decimal MiningReward { get; set; } = 1000;
-        public string MiningRewardAddress { get; set; } = "blockchain1";
         public int DifficultyCorrectureInterval { get; private set; } = 10;
         public int DifficultyTimeTarget { get; private set; } = 20;
 
@@ -26,7 +27,7 @@ namespace Blockchain.NET.Blockchain
         public NetworkNode Server { get; set; }
 
         private bool _isMining;
-        private List<Transaction> _pendingTransactions = new List<Transaction>();
+        private List<Transaction> _pendingTransactions;
 
         public BlockChain(Wallet wallet)
         {
@@ -66,23 +67,16 @@ namespace Blockchain.NET.Blockchain
                 }
                 else
                 {
-                    //Dummy Transactions
-                    Random rndm = new Random();
-                    for (int i = 0; i < rndm.Next(200, 1000); i++)
-                    {
-                        _pendingTransactions.Add(new Transaction() { PublicKey = i.ToString() });
-                    }
-                    //Demo Transaction
                     Block nextBlock = null;
                     lock (_pendingTransactions)
                     {
                         var miningAddress = Wallet.GetNewAddress();
-                        _pendingTransactions.Add(new Transaction(null, miningAddress.PublicKey, MiningReward));
+                        AddTransaction(new Transaction(null, miningAddress.PrivateKey, miningAddress.PublicKey, MiningReward, miningAddress.Key), miningAddress.PublicKey);
                         nextBlock = new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), _pendingTransactions);
                         _pendingTransactions = new List<Transaction>();
                     }
                     var difficulty = lastBlock.Difficulty;
-                    if(lastBlock.Height > 1 && lastBlock.Height % DifficultyCorrectureInterval == 1)
+                    if (lastBlock.Height > 1 && lastBlock.Height % DifficultyCorrectureInterval == 1)
                     {
                         var lowTime = GetBlock(lastBlock.Height - DifficultyCorrectureInterval).TimeStamp;
                         var highTime = GetBlock(lastBlock.Height).TimeStamp;
@@ -111,9 +105,10 @@ namespace Blockchain.NET.Blockchain
             }
         }
 
-        public void AddTransaction(Transaction transaction)
+        public void AddTransaction(Transaction transaction, string publicKey)
         {
-            _pendingTransactions.Add(transaction);
+            if (transaction.Verify(publicKey))
+                _pendingTransactions.Add(transaction);
         }
 
         #endregion

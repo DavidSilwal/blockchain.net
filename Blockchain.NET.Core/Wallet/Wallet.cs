@@ -1,10 +1,12 @@
 ﻿using Blockchain.NET.Core.Helpers;
+using Blockchain.NET.Core.Store;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
-namespace Blockchain.NET.Core
+namespace Blockchain.NET.Core.Wallet
 {
     public class Wallet : Serializable<Wallet>
     {
@@ -46,6 +48,18 @@ namespace Blockchain.NET.Core
             Addresses.Add(newAddress);
             Save();
             return newAddress;
+        }
+
+        public decimal GetBalance()
+        {
+            decimal balance = 0;
+            var walletAddresses = Addresses.Select(a => a.Key).ToList();
+            using (BlockchainDbContext db = new BlockchainDbContext())
+            {
+                balance += db.Transactions.Where(t => walletAddresses.Contains(t.Output)).Select(t => t.Amount).Sum();
+                balance -= db.Transactions.Where(t => walletAddresses.Contains(t.Input)).Select(t => t.Amount).Sum();
+            }
+            return balance;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using Blockchain.NET.Core;
+using Blockchain.NET.Core.Mining;
 using Network;
 using Network.Attributes;
 using Network.Packets;

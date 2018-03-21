@@ -7,7 +7,7 @@ namespace Blockchain.NET.Core.Helpers.Cryptography
 {
     public static class RSAHelper
     {
-        public static string SignData(string message, RSAParameters privateKey)
+        public static string SignData(string message, string privateKey)
         {
             var encoding = new ASCIIEncoding();
             byte[] signedBytes;
@@ -18,7 +18,7 @@ namespace Blockchain.NET.Core.Helpers.Cryptography
                 try
                 {
                     //// Import the private key used for signing the message
-                    rsa.ImportParameters(privateKey);
+                    rsa.ImportParameters(ToRSAParameters(privateKey));
 
                     //// Sign the data, using SHA512 as the hashing algorithm 
                     signedBytes = rsa.SignData(originalData, CryptoConfig.MapNameToOID("SHA512"));
@@ -38,7 +38,7 @@ namespace Blockchain.NET.Core.Helpers.Cryptography
             return Convert.ToBase64String(signedBytes);
         }
 
-        public static bool VerifyData(string originalMessage, string signedMessage, RSAParameters publicKey)
+        public static bool VerifyData(string originalMessage, string signedMessage, string publicKey)
         {
             var encoding = new ASCIIEncoding();
             bool success = false;
@@ -48,7 +48,7 @@ namespace Blockchain.NET.Core.Helpers.Cryptography
                 byte[] signedBytes = Convert.FromBase64String(signedMessage);
                 try
                 {
-                    rsa.ImportParameters(publicKey);
+                    rsa.ImportParameters(ToRSAParameters(publicKey));
 
                     SHA512Managed Hash = new SHA512Managed();
 

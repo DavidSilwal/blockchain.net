@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Blockchain.NET.Core
+namespace Blockchain.NET.Core.Wallet
 {
     public class Address
     {

@@ -9,9 +9,18 @@ namespace Blockchain.NET.Core.Helpers.Cryptography
     {
         public static string Sha256(string randomString)
         {
-            var crypt = new System.Security.Cryptography.SHA256Managed();
+            if (string.IsNullOrEmpty(randomString))
+                return string.Empty;
+            return Sha256(Encoding.UTF8.GetBytes(randomString));
+        }
+
+        public static string Sha256(byte[] data)
+        {
+            if (data == null)
+                return string.Empty;
             var hash = new System.Text.StringBuilder();
-            byte[] crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(randomString));
+            var crypt = new System.Security.Cryptography.SHA256Managed();
+            byte[] crypto = crypt.ComputeHash(data);
             foreach (byte theByte in crypto)
             {
                 hash.Append(theByte.ToString("x2"));
@@ -29,12 +38,12 @@ namespace Blockchain.NET.Core.Helpers.Cryptography
             return hash.ToString();
         }
 
-        public static string RIPEMD160(string password)
+        public static string RIPEMD160(string randomString)
         {
             // create a ripemd160 object
             var r160 = Blockchain.NET.Core.Helpers.Cryptography.RIPEMD160.RIPEMD160.Create();
             // convert the string to byte
-            byte[] myByte = System.Text.Encoding.ASCII.GetBytes(password);
+            byte[] myByte = System.Text.Encoding.ASCII.GetBytes(randomString);
             // compute the byte to RIPEMD160 hash
             byte[] encrypted = r160.ComputeHash(myByte);
             // create a new StringBuilder process the hash byte

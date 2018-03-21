@@ -1,10 +1,11 @@
 ﻿using Blockchain.NET.Core;
+using Blockchain.NET.Core.Mining;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Blockchain.NET.Blockchain.Store
+namespace Blockchain.NET.Core.Store
 {
     public class BlockchainDbContext : DbContext
     {

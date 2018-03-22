@@ -22,7 +22,7 @@ namespace Blockchain.NET.Node
             var wallet = Wallet.Load("test123");
             var blockChain = new BlockChain(wallet);
 
-            var newAddress = wallet.Addresses.FirstOrDefault();
+            var newAddress = wallet.NewAddress();
 
             //var testTransaction = new Transaction(new[] { new Input(newAddress.Key) }.ToList(), wallet, new[] { new Output("11x0ab02006ec824714f78fab52d4b153f9a0dbebf9", 200) }.ToList());
 

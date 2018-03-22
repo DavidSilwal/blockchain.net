@@ -1,4 +1,5 @@
 ﻿using Blockchain.NET.Core.Helpers;
+using Blockchain.NET.Core.Helpers.Calculations;
 using Blockchain.NET.Core.Helpers.Cryptography;
 using Newtonsoft.Json;
 using System;
@@ -58,7 +59,7 @@ namespace Blockchain.NET.Core.Mining
         {
             if (Inputs != null)
             {
-                decimal balance = BalanceCalculationHelper.GetBalanceOfAddresses(Inputs.Select(i => i.Key).ToArray());
+                decimal balance = BalanceHelper.GetBalanceOfAddresses(Inputs.Select(i => i.Key).ToArray());
                 Outputs.Add(new Output(wallet.NewAddress().Key, balance - Outputs.Select(o => o.Amount).Sum()));
             }
         }

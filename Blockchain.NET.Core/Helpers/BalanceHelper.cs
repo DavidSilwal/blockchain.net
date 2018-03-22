@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace Blockchain.NET.Core.Helpers
+namespace Blockchain.NET.Core.Helpers.Calculations
 {
-    public static class BalanceCalculationHelper
+    public static class BalanceHelper
     {
         public static decimal GetBalanceOfAddress(string address)
         {

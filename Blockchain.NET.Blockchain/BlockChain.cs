@@ -1,6 +1,7 @@
 ﻿using Blockchain.NET.Blockchain.Network;
 using Blockchain.NET.Core;
 using Blockchain.NET.Core.Helpers;
+using Blockchain.NET.Core.Helpers.Calculations;
 using Blockchain.NET.Core.Mining;
 using Blockchain.NET.Core.Store;
 using Blockchain.NET.Core.Wallet;
@@ -109,8 +110,8 @@ namespace Blockchain.NET.Blockchain
         {
             if (transaction.Verify())
             {
-                decimal balance = transaction.Inputs == null ? 0 : BalanceCalculationHelper.GetBalanceOfAddresses(transaction.Inputs.Select(i => i.Key).ToArray());
-                bool everUsedAsInput = transaction.Inputs == null ? false : BalanceCalculationHelper.EverUsedAsInput(transaction.Inputs.Select(i => i.Key).ToArray());
+                decimal balance = transaction.Inputs == null ? 0 : BalanceHelper.GetBalanceOfAddresses(transaction.Inputs.Select(i => i.Key).ToArray());
+                bool everUsedAsInput = transaction.Inputs == null ? false : BalanceHelper.EverUsedAsInput(transaction.Inputs.Select(i => i.Key).ToArray());
                 if (transaction.Outputs != null && !everUsedAsInput && (transaction.Inputs == null || balance >= transaction.Outputs.Select(o => o.Amount).Sum()))
                 {
                     _pendingTransactions.Add(transaction);

@@ -1,4 +1,6 @@
 ﻿using Blockchain.NET.Core.Helpers;
+using Blockchain.NET.Core.Helpers.Calculations;
+using Blockchain.NET.Core.Helpers.Cryptography;
 using Blockchain.NET.Core.Store;
 using System;
 using System.Collections.Generic;
@@ -8,7 +10,7 @@ using System.Text;
 
 namespace Blockchain.NET.Core.Wallet
 {
-    public class Wallet : Serializable<Wallet>
+    public class Wallet
     {
         public List<Address> Addresses = new List<Address>();
 
@@ -26,7 +28,7 @@ namespace Blockchain.NET.Core.Wallet
         {
             if (!Directory.Exists(_rootPath))
                 Directory.CreateDirectory(_rootPath);
-            File.WriteAllBytes(Path.Combine(_rootPath, _walletName), Serialize(_password));
+            File.WriteAllBytes(Path.Combine(_rootPath, _walletName), AESHelper.Encrypt(SerializeHelper.Serialize(this), _password));
         }
 
         public static Wallet Load(string password)
@@ -37,7 +39,7 @@ namespace Blockchain.NET.Core.Wallet
             {
                 new Wallet(password).Save();
             }
-            var wallet = Deserialize(File.ReadAllBytes(Path.Combine(_rootPath, _walletName)), password);
+            var wallet = SerializeHelper.Deserialize<Wallet>(AESHelper.Decrypt(File.ReadAllBytes(Path.Combine(_rootPath, _walletName)), password));
             wallet._password = password;
             return wallet;
         }
@@ -53,7 +55,7 @@ namespace Blockchain.NET.Core.Wallet
         public decimal GetBalance()
         {
             var walletAddresses = Addresses.Select(a => a.Key).ToArray();
-            return BalanceCalculationHelper.GetBalanceOfAddresses(walletAddresses);
+            return BalanceHelper.GetBalanceOfAddresses(walletAddresses);
         }
     }
 }

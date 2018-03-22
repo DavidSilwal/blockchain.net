@@ -38,16 +38,22 @@ namespace Blockchain.NET.Core.Mining
             TimeStamp = DateTime.Now;
             PreviousHash = previousHash;
             Transactions = transactions;
-            if (transactions.Count > 0)
+            MerkleTreeHash = CreateMerkleTreeHash();
+        }
+
+        public string CreateMerkleTreeHash()
+        {
+            if (Transactions.Count > 0)
             {
-                var merkleTreeList = transactions.Select(t => t.GenerateHash()).ToList();
+                var merkleTreeList = Transactions.Select(t => t.GenerateHash()).ToList();
                 while (merkleTreeList.Count > 1)
                 {
                     merkleTreeList.Add(HashHelper.Sha256(merkleTreeList[0] + merkleTreeList[1]));
                     merkleTreeList.RemoveRange(0, 2);
                 }
-                MerkleTreeHash = merkleTreeList[0];
+                return merkleTreeList[0];
             }
+            return string.Empty;
         }
 
         public void MineBlock(int difficulty)

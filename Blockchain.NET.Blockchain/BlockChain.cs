@@ -60,34 +60,25 @@ namespace Blockchain.NET.Blockchain
             {
                 var lastBlock = LastBlock();
 
-                if (lastBlock == null)
+                Block nextBlock = null;
+                lock (_pendingTransactions)
                 {
-                    var genesisBlock = new Block(1, null, new List<Transaction>());
-                    genesisBlock.MineBlock(1);
-                    AddBlock(genesisBlock);
+                    var miningAddress = Wallet.NewAddress();
+                    AddTransaction(new Transaction(null, Wallet, new[] { new Output(miningAddress.Key, MiningReward) }.ToList()));
+                    nextBlock = lastBlock == null ? new Block(1, null, _pendingTransactions) : new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), _pendingTransactions);
+                    _pendingTransactions = new List<Transaction>();
                 }
-                else
+                var difficulty = lastBlock == null ? 1 : lastBlock.Difficulty;
+                if (lastBlock != null && lastBlock.Height > 1 && lastBlock.Height % DifficultyCorrectureInterval == 1)
                 {
-                    Block nextBlock = null;
-                    lock (_pendingTransactions)
-                    {
-                        var miningAddress = Wallet.NewAddress();
-                        AddTransaction(new Transaction(null, Wallet, new[] { new Output(miningAddress.Key, MiningReward) }.ToList()));
-                        nextBlock = new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), _pendingTransactions);
-                        _pendingTransactions = new List<Transaction>();
-                    }
-                    var difficulty = lastBlock.Difficulty;
-                    if (lastBlock.Height > 1 && lastBlock.Height % DifficultyCorrectureInterval == 1)
-                    {
-                        var lowTime = GetBlock(lastBlock.Height - DifficultyCorrectureInterval).TimeStamp;
-                        var highTime = GetBlock(lastBlock.Height).TimeStamp;
+                    var lowTime = GetBlock(lastBlock.Height - DifficultyCorrectureInterval).TimeStamp;
+                    var highTime = GetBlock(lastBlock.Height).TimeStamp;
 
-                        difficulty = Convert.ToInt32(lastBlock.Difficulty * DifficultyTimeTarget / ((highTime - lowTime).TotalSeconds / DifficultyCorrectureInterval));
-                    }
-                    nextBlock.MineBlock(difficulty);
-                    AddBlock(nextBlock);
-                    BlockchainConsole.WriteLine($"MINED BLOCK: {nextBlock}", ConsoleEventType.MINEDBLOCK);
+                    difficulty = Convert.ToInt32(lastBlock.Difficulty * DifficultyTimeTarget / ((highTime - lowTime).TotalSeconds / DifficultyCorrectureInterval));
                 }
+                nextBlock.MineBlock(difficulty);
+                AddBlock(nextBlock);
+                BlockchainConsole.WriteLine($"MINED BLOCK: {nextBlock}", ConsoleEventType.MINEDBLOCK);
             }
         }
 
@@ -96,12 +87,35 @@ namespace Blockchain.NET.Blockchain
         #region MODIFICATION
         public void AddBlock(Block block)
         {
+            //Check if Proof of Work is correct
             if (block.GenerateHash().Substring(0, block.Difficulty).All(c => c == '0'))
             {
-                using (BlockchainDbContext db = new BlockchainDbContext())
+                //Check if MerkleTree from transactions is correct
+                if (block.MerkleTreeHash == block.CreateMerkleTreeHash())
                 {
-                    db.Blocks.Add(block);
-                    db.SaveChanges();
+                    //Check if only one Coinbase transaction
+                    if (block.Transactions.Count(t => t.Inputs == null || (t.Inputs != null && t.Inputs.Count == 0)) == 1)
+                    {
+                        //Check signatures and validity of transactions
+                        bool transactionsValid = true;
+                        if (block.Transactions != null)
+                            foreach (var transaction in block.Transactions)
+                            {
+                                if (!transaction.Verify())
+                                {
+                                    transactionsValid = false;
+                                    break;
+                                }
+                            }
+                        if (transactionsValid)
+                        {
+                            using (BlockchainDbContext db = new BlockchainDbContext())
+                            {
+                                db.Blocks.Add(block);
+                                db.SaveChanges();
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -110,11 +124,28 @@ namespace Blockchain.NET.Blockchain
         {
             if (transaction.Verify())
             {
-                decimal balance = transaction.Inputs == null ? 0 : BalanceHelper.GetBalanceOfAddresses(transaction.Inputs.Select(i => i.Key).ToArray());
-                bool everUsedAsInput = transaction.Inputs == null ? false : BalanceHelper.EverUsedAsInput(transaction.Inputs.Select(i => i.Key).ToArray());
-                if (transaction.Outputs != null && !everUsedAsInput && (transaction.Inputs == null || balance >= transaction.Outputs.Select(o => o.Amount).Sum()))
+                // Check if 
+                if (transaction.Outputs != null)
                 {
-                    _pendingTransactions.Add(transaction);
+                    // If Coinbase transaction no validity
+                    if (transaction.Inputs == null)
+                    {
+                        _pendingTransactions.Add(transaction);
+                    }
+                    else
+                    {
+                        decimal balance = BalanceHelper.GetBalanceOfAddresses(transaction.Inputs.Select(i => i.Key).ToArray());
+                        // Check if enough balance on inputs
+                        if (balance >= transaction.Outputs.Select(o => o.Amount).Sum())
+                        {
+                            bool everUsedAsInput = BalanceHelper.EverUsedAsInput(transaction.Inputs.Select(i => i.Key).ToArray());
+                            // Check if ever used as input before
+                            if (!everUsedAsInput)
+                            {
+                                _pendingTransactions.Add(transaction);
+                            }
+                        }
+                    }
                 }
             }
         }

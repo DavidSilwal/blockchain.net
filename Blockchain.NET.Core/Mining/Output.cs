@@ -7,7 +7,7 @@ using System.Text;
 
 namespace Blockchain.NET.Core.Mining
 {
-    public class IO
+    public class Output
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -17,18 +17,21 @@ namespace Blockchain.NET.Core.Mining
 
         public string Key { get; set; }
 
+        public decimal Amount { get; set; }
+
         public Transaction Transaction { get; set; }
 
-        public IO() { }
+        public Output() { }
 
-        public IO(string key)
+        public Output(string key, decimal amount)
         {
             Key = key;
+            Amount = amount;
         }
 
         public string GenerateHash()
         {
-            return HashHelper.Sha256(Key);
+            return HashHelper.Sha256(Key + Amount);
         }
     }
 }

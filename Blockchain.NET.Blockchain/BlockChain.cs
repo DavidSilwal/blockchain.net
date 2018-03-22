@@ -71,7 +71,7 @@ namespace Blockchain.NET.Blockchain
                     lock (_pendingTransactions)
                     {
                         var miningAddress = Wallet.NewAddress();
-                        AddTransaction(new Transaction(null, miningAddress.PrivateKey, miningAddress.PublicKey, MiningReward, new[] { new IO(miningAddress.Key) }.ToList()), new[] { miningAddress.PublicKey });
+                        AddTransaction(new Transaction(null, Wallet, new[] { new Output(miningAddress.Key, MiningReward) }.ToList()));
                         nextBlock = new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), _pendingTransactions);
                         _pendingTransactions = new List<Transaction>();
                     }
@@ -105,18 +105,15 @@ namespace Blockchain.NET.Blockchain
             }
         }
 
-        public void AddTransaction(Transaction transaction, string[] unlockScripts)
+        public void AddTransaction(Transaction transaction)
         {
-            if (transaction.Verify(unlockScripts))
+            if (transaction.Verify())
             {
-                using (BlockchainDbContext db = new BlockchainDbContext())
+                decimal balance = transaction.Inputs == null ? 0 : BalanceCalculationHelper.GetBalanceOfAddresses(transaction.Inputs.Select(i => i.Key).ToArray());
+                bool everUsedAsInput = transaction.Inputs == null ? false : BalanceCalculationHelper.EverUsedAsInput(transaction.Inputs.Select(i => i.Key).ToArray());
+                if (transaction.Outputs != null && !everUsedAsInput && (transaction.Inputs == null || balance >= transaction.Outputs.Select(o => o.Amount).Sum()))
                 {
-                    var inputTransactions = db.Transactions.Where(t => t.Inputs.Select(i => i.Key).Contains());
-
-                    if (inputTransaction != null && inputTransaction.Amount >= transaction.Amount)
-                    {
-                        _pendingTransactions.Add(transaction);
-                    }
+                    _pendingTransactions.Add(transaction);
                 }
             }
         }

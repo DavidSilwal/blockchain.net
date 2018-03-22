@@ -1,4 +1,5 @@
-﻿using Blockchain.NET.Core.Helpers.Cryptography;
+﻿using Blockchain.NET.Core.Helpers;
+using Blockchain.NET.Core.Helpers.Cryptography;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -15,47 +16,69 @@ namespace Blockchain.NET.Core.Mining
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long Id { get; set; }
 
-        public long BlockHeight { get; set; }
+        public int BlockHeight { get; set; }
 
-        public virtual ICollection<IO> Inputs { get; set; }
-
-        public string PublicKey { get; set; }
-
-        public string Signature { get; set; }
-
-        public decimal Amount { get; set; }
+        public virtual ICollection<Input> Inputs { get; set; }
 
         public byte[] Data { get; set; }
 
-        public virtual ICollection<IO> Outputs { get; set; }
+        public virtual ICollection<Output> Outputs { get; set; }
 
         [ForeignKey(nameof(BlockHeight))]
         public Block Block { get; set; }
 
         public Transaction() { }
 
-        public Transaction(List<IO> inputs, string privateKey, string publicKey, decimal amount, List<IO> outputs, byte[] data = null)
+        public Transaction(List<Input> inputs, Wallet.Wallet wallet, List<Output> outputs, byte[] data = null)
         {
             Inputs = inputs;
-            PublicKey = publicKey;
-            Amount = amount;
             Data = data;
             Outputs = outputs;
-            Signature = RSAHelper.SignData(GenerateHash(), privateKey);
+            calculateOutputs(wallet);
+            signInputs(wallet);
+        }
+
+        private void signInputs(Wallet.Wallet wallet)
+        {
+            if (Inputs != null)
+            {
+                foreach (var input in Inputs)
+                {
+                    var foundAddress = wallet.Addresses.FirstOrDefault(a => a.Key == input.Key);
+                    if (foundAddress != null)
+                    {
+                        input.Signature = RSAHelper.SignData(GenerateHash(), foundAddress.PrivateKey);
+                        input.PublicKey = foundAddress.PublicKey;
+                    }
+                }
+            }
+        }
+
+        private void calculateOutputs(Wallet.Wallet wallet)
+        {
+            if (Inputs != null)
+            {
+                decimal balance = BalanceCalculationHelper.GetBalanceOfAddresses(Inputs.Select(i => i.Key).ToArray());
+                Outputs.Add(new Output(wallet.NewAddress().Key, balance - Outputs.Select(o => o.Amount).Sum()));
+            }
         }
 
         public string GenerateHash()
         {
-            var inputsHash = HashHelper.Sha256(string.Join("", Inputs.Select(i => i.GenerateHash())));
+            var inputsHash = Inputs == null ? string.Empty : HashHelper.Sha256(string.Join("", Inputs.Select(i => i.GenerateHash())));
             var outputsHash = HashHelper.Sha256(string.Join("", Outputs.Select(i => i.GenerateHash())));
-            return HashHelper.Sha256(inputsHash + Amount + HashHelper.Sha256(Data) + outputsHash);
+            return HashHelper.Sha256(inputsHash + HashHelper.Sha256(Data) + outputsHash);
         }
 
-        public bool Verify(string[] unlockScripts)
+        public bool Verify()
         {
-            var inputList = Inputs.Select(i => i.Key).OrderBy(i => i).ToList();
-            var unlockScriptsList = unlockScripts.Select(s => HashHelper.GenerateAddress(PublicKey)).OrderBy(s => s).ToList();
-            return RSAHelper.VerifyData(GenerateHash(), Signature, PublicKey) && inputList.SequenceEqual(unlockScriptsList);
+            if (Inputs != null)
+                foreach (var input in Inputs)
+                {
+                    if (!RSAHelper.VerifyData(GenerateHash(), input.Signature, input.PublicKey) || input.Key != HashHelper.GenerateAddress(input.PublicKey))
+                        return false;
+                }
+            return true;
         }
     }
 }

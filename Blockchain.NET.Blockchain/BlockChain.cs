@@ -68,7 +68,7 @@ namespace Blockchain.NET.Blockchain
                     nextBlock = lastBlock == null ? new Block(1, null, _pendingTransactions) : new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), _pendingTransactions);
                     _pendingTransactions = new List<Transaction>();
                 }
-                var difficulty = lastBlock == null ? 1 : lastBlock.Difficulty;
+                var difficulty = lastBlock == null ? 5 : lastBlock.Difficulty;
                 if (lastBlock != null && lastBlock.Height > 1 && lastBlock.Height % DifficultyCorrectureInterval == 1)
                 {
                     var lowTime = GetBlock(lastBlock.Height - DifficultyCorrectureInterval).TimeStamp;

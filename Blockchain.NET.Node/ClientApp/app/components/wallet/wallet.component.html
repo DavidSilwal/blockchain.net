@@ -1,0 +1,28 @@
+<h1>Wallet</h1>
+<form class="form-inline">
+    <div class="form-group">
+        <label class="sr-only" for="username">Benutzername</label>
+        <input type="text" class="form-control" id="username" value="{{username}}" placeholder="Benutzername">
+    </div>
+    <div class="form-group">
+        <label class="sr-only" for="password">Passwort</label>
+        <input type="password" class="form-control" id="password" value="{{password}}" placeholder="Password">
+    </div>
+    <button type="submit" class="btn btn-default">Einloggen</button>
+</form>
+<h2>Guthaben</h2>
+<blockquote>
+    <p class="text-uppercase" id="balance">{{walletBalance?.balance}}</p>
+</blockquote>
+<h2>Transaktionen</h2>
+<form class="form-inline">
+    <div class="form-group">
+        <label class="sr-only" for="address">Adresse</label>
+        <input type="text" class="form-control" id="address" value="{{address}}" placeholder="Adresse">
+    </div>
+    <div class="form-group">
+        <label class="sr-only" for="message">Nachricht</label>
+        <input type="text" class="form-control" id="message" value="{{message}}" placeholder="Nachricht">
+    </div>
+    <button type="button" class="btn btn-default" (click)="startWalletBalance()">Senden</button>
+</form>

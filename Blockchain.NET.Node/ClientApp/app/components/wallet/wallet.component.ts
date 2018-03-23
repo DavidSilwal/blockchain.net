@@ -1,37 +1,95 @@
-import { Component, Inject, AfterViewInit } from '@angular/core';
-import { Http } from '@angular/http';
+import { Component, Inject, OnInit } from '@angular/core';
+import { Http, Headers } from '@angular/http';
+import { Observable } from 'rxjs/Observable';
+import { DecimalPipe } from '@angular/common';
+import 'rxjs/add/observable/interval';
+import 'rxjs/add/operator/takeWhile';
 
 @Component({
     selector: 'wallet',
     templateUrl: './wallet.component.html'
 })
-export class WalletComponent implements AfterViewInit {
+export class WalletComponent implements OnInit {
 
     public walletBalance: WalletBalance;
+    public transaction: TransactionRequest;
+    public transactions: Transaction[] = [];
+    public blockHeight: number = 0;
+    public actualAddress: Address;
 
     constructor(private http: Http, @Inject('BASE_URL') private baseUrl: string) {
-
+        this.transaction = { address: '', amount: 0, message: '' };
     }
 
-    ngAfterViewInit() {
-        //this.reloadWalletBalance();
-    }
-
-    public startWalletBalance() {
+    ngOnInit() {
+        Observable.interval(8000)
+            .takeWhile(() => true)
+            .subscribe(i => {
+                this.reloadWalletBalance();
+            });
         this.reloadWalletBalance();
+        Observable.interval(4000)
+            .takeWhile(() => true)
+            .subscribe(i => {
+                this.loadTransactions();
+            });
+        this.loadTransactions();
     }
 
     private reloadWalletBalance() {
         this.http.get(this.baseUrl + 'api/wallet/WalletBalance').subscribe(result => {
             this.walletBalance = result.json() as WalletBalance;
-            setTimeout(() => this.reloadWalletBalance(), 4000);
         }, error => console.error(error));
     }
 
-    public username = 'wallet';
-    public passwort = 'test123';
+    private addTransaction() {
+        this.http.post(this.baseUrl + 'api/wallet/AddTransaction', this.transaction).subscribe(result => {
+            this.transaction = { address: '', amount: 0, message: '' };
+        }, error => console.error(error));
+    }
+
+    private loadTransactions() {
+        this.http.get(this.baseUrl + 'api/wallet/ActualTransactions?blockHeight=' + this.blockHeight).subscribe(result => {
+            var transactions = result.json() as Transaction[];
+            for (let trans of transactions) {
+                this.transactions.unshift(trans);
+                this.blockHeight = trans.blockHeight;
+            }
+        }, error => console.error(error));
+    }
+
+    private generateAddress() {
+        this.http.get(this.baseUrl + 'api/wallet/GenerateAddress').subscribe(result => {
+            this.actualAddress = result.json() as Address;
+        }, error => console.error(error));
+    }
+}
+
+interface Address {
+    key: string;
 }
 
 interface WalletBalance {
     balance: number;
 }
+
+interface TransactionRequest {
+    address: string;
+    amount: number;
+    message: string;
+}
+
+interface Transaction {
+    inputs: IO[];
+    message: string;
+    blockHeight: number;
+    outputs: string[];
+    amount: number;
+    isIncome: boolean;
+}
+
+interface IO {
+    key: string;
+    amount: number;
+}
+

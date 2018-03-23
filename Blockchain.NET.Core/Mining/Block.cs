@@ -66,7 +66,7 @@ namespace Blockchain.NET.Core.Mining
                 var totalHashesCounter = 0;
                 DateTime startTime = DateTime.Now;
 
-                Task[] miningTasks = new Task[Environment.ProcessorCount];
+                Task[] miningTasks = new Task[1]; // Task[] miningTasks = new Task[Environment.ProcessorCount];
                 var difficultyValue = string.Join("0", new string[difficulty + 1]);
                 for (int i = 0; i < miningTasks.Length; i++)
                 {

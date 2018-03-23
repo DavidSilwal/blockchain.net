@@ -15,7 +15,7 @@ namespace Blockchain.NET.Core.Helpers.Calculations
             if (!string.IsNullOrEmpty(address))
                 using (BlockchainDbContext db = new BlockchainDbContext())
                 {
-                    balance = db.Inputs.Any(i => i.Key == address) ? 0 : db.Outputs.Where(o => o.Key == address).Select(t => t.Amount).Sum();
+                    balance = db.Outputs.Where(o => o.Key == address).Select(t => t.Amount).Sum();
                 }
             return balance;
         }

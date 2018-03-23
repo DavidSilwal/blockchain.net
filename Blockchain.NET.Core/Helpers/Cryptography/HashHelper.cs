@@ -28,6 +28,22 @@ namespace Blockchain.NET.Core.Helpers.Cryptography
             return hash.ToString();
         }
 
+        public static byte[] Sha256Bytes(string randomString)
+        {
+            if (string.IsNullOrEmpty(randomString))
+                return null;
+            return Sha256Bytes(Encoding.UTF8.GetBytes(randomString));
+        }
+
+        public static byte[] Sha256Bytes(byte[] data)
+        {
+            if (data == null)
+                return null;
+            var hash = new System.Text.StringBuilder();
+            var crypt = new System.Security.Cryptography.SHA256Managed();
+            return crypt.ComputeHash(data);
+        }
+
         public static string ByteArrayToHexString(byte[] array)
         {
             var hash = new System.Text.StringBuilder();

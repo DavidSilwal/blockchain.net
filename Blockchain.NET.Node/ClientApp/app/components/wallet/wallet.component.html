@@ -1,28 +1,63 @@
-<h1>Wallet</h1>
-<form class="form-inline">
-    <div class="form-group">
-        <label class="sr-only" for="username">Benutzername</label>
-        <input type="text" class="form-control" id="username" value="{{username}}" placeholder="Benutzername">
+
+<div class="row">
+    <div class="col-sm-6">
+        <h2>Wallet</h2>
+        <h3>Guthaben</h3>
+        <blockquote>
+            <p class="text-uppercase" id="balance">{{walletBalance?.balance}} <span class="glyphicon glyphicon-bitcoin" aria-hidden="true"></span></p>
+        </blockquote>
+        <h3>Transaktion empfangen</h3>
+        <form>
+            <div class="form-group input-group">
+                <input type="text" class="form-control" placeholder="Neue Adresse" [value]="actualAddress.key">
+                <span class="input-group-btn">
+                    <button class="btn btn-success" type="button" (click)="generateAddress()">Neue Adresse</button>
+                </span>
+            </div>
+        </form>
     </div>
-    <div class="form-group">
-        <label class="sr-only" for="password">Passwort</label>
-        <input type="password" class="form-control" id="password" value="{{password}}" placeholder="Password">
+    <div class="col-sm-6">
+        <h2>Transaktion senden</h2>
+        <form>
+            <div class="form-group">
+                <label class="sr-only" for="address">Adresse</label>
+                <input type="text" class="form-control" id="address" [value]="transaction.address" (input)="transaction.address = $event.target.value" placeholder="Adresse">
+            </div>
+            <div class="form-group input-group">
+                <label class="sr-only" for="amount">Betrag</label>
+                <span class="input-group-addon">$</span>
+                <input type="number" class="form-control" id="amount" [value]="transaction.amount" (input)="transaction.amount = $event.target.value" placeholder="Betrag (00.00)">
+            </div>
+            <div class="form-group">
+                <label class="sr-only" for="message">Nachricht</label>
+                <textarea class="form-control" ref-textarea id="message" (input)="transaction.message = $event.target.value" [value]="transaction.message" rows="4" placeholder="Nachricht"></textarea>
+            </div>
+            <button type="button" class="btn btn-default" (click)="addTransaction()">Senden</button>
+        </form>
     </div>
-    <button type="submit" class="btn btn-default">Einloggen</button>
-</form>
-<h2>Guthaben</h2>
-<blockquote>
-    <p class="text-uppercase" id="balance">{{walletBalance?.balance}}</p>
-</blockquote>
-<h2>Transaktionen</h2>
-<form class="form-inline">
-    <div class="form-group">
-        <label class="sr-only" for="address">Adresse</label>
-        <input type="text" class="form-control" id="address" value="{{address}}" placeholder="Adresse">
-    </div>
-    <div class="form-group">
-        <label class="sr-only" for="message">Nachricht</label>
-        <input type="text" class="form-control" id="message" value="{{message}}" placeholder="Nachricht">
-    </div>
-    <button type="button" class="btn btn-default" (click)="startWalletBalance()">Senden</button>
-</form>
+</div>
+
+
+<h3>Transaktionsverlauf</h3>
+<table class='table table-responsive' *ngIf="transactions">
+    <thead>
+        <tr>
+            <th>I/O</th>
+            <th>Inputs</th>
+            <th>Nachricht</th>
+            <th>Block</th>
+            <th>Outputs</th>
+            <th>Betrag</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr *ngFor="let transaction of transactions">
+            <td><span *ngIf="transaction.isIncome === false" class="glyphicon glyphicon-export text-danger" aria-hidden="true"></span><span *ngIf="transaction.isIncome == true" class="glyphicon glyphicon-import text-success" aria-hidden="true"></span> </td>
+            <td><ul><li *ngFor="let input of transaction.inputs; index as i; trackBy: trackByFn"><span class="text-danger" title="{{input.amount}}">{{input.key}}</span></li></ul></td>
+            <td>{{ transaction.message}}</td>
+            <td>{{ transaction.blockHeight }}</td>
+            <td><ul><li *ngFor="let output of transaction.outputs; index as i; trackBy: trackByFn"><span class="text-success" title="{{output.amount}}">{{output.key}}</span></li></ul></td>
+            <td>{{ transaction.amount}}</td>
+        </tr>
+    </tbody>
+</table>

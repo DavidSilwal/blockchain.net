@@ -69,13 +69,13 @@ namespace Blockchain.NET.Blockchain
                     _pendingTransactions = new List<Transaction>();
                 }
                 var difficulty = lastBlock == null ? 5 : lastBlock.Difficulty;
-                if (lastBlock != null && lastBlock.Height > 1 && lastBlock.Height % DifficultyCorrectureInterval == 1)
-                {
-                    var lowTime = GetBlock(lastBlock.Height - DifficultyCorrectureInterval).TimeStamp;
-                    var highTime = GetBlock(lastBlock.Height).TimeStamp;
+                //if (lastBlock != null && lastBlock.Height > 1 && lastBlock.Height % DifficultyCorrectureInterval == 1)
+                //{
+                //    var lowTime = GetBlock(lastBlock.Height - DifficultyCorrectureInterval).TimeStamp;
+                //    var highTime = GetBlock(lastBlock.Height).TimeStamp;
 
-                    difficulty = Convert.ToInt32(lastBlock.Difficulty * DifficultyTimeTarget / ((highTime - lowTime).TotalSeconds / DifficultyCorrectureInterval));
-                }
+                //    difficulty = Convert.ToInt32(lastBlock.Difficulty * DifficultyTimeTarget / ((highTime - lowTime).TotalSeconds / DifficultyCorrectureInterval));
+                //}
                 nextBlock.MineBlock(difficulty);
                 AddBlock(nextBlock);
                 BlockchainConsole.WriteLine($"MINED BLOCK: {nextBlock}", ConsoleEventType.MINEDBLOCK);
@@ -120,7 +120,7 @@ namespace Blockchain.NET.Blockchain
             }
         }
 
-        public void AddTransaction(Transaction transaction)
+        public bool AddTransaction(Transaction transaction)
         {
             if (transaction.Verify())
             {
@@ -143,11 +143,13 @@ namespace Blockchain.NET.Blockchain
                             if (!everUsedAsInput)
                             {
                                 _pendingTransactions.Add(transaction);
+                                return true;
                             }
                         }
                     }
                 }
             }
+            return false;
         }
 
         #endregion

@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 using Blockchain.NET.Blockchain;
+using Blockchain.NET.Core.Helpers.Calculations;
+using Blockchain.NET.Core.Helpers.Cryptography;
 using Blockchain.NET.Core.Wallet;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -15,10 +18,32 @@ namespace Blockchain.NET.Node
     public class Program
     {
         public static Wallet Wallet { get; set; }
+
+        public static BlockChain BlockChain { get; set; }
+
         public static void Main(string[] args)
         {
             Wallet = Wallet.Load("test123");
-            var blockChain = new BlockChain(Wallet);
+            BlockChain = new BlockChain(Wallet);
+
+            //var difficulty = Math.Pow(2, 256);
+
+            //int nonce = 1;
+
+            //while(true)
+            //{
+            //    var blockHashBytes = HashHelper.Sha256Bytes(nonce.ToString());
+            //    var hashValue = BitConverter.ToDouble(blockHashBytes, 0);
+            //    if (hashValue >= 0 && hashValue < difficulty)
+            //    {
+            //        Console.WriteLine("test");
+            //    }
+            //    nonce++;
+            //}
+
+
+
+            //Console.ReadLine();
 
             //var newAddress = Wallet.Addresses.FirstOrDefault();
 
@@ -28,7 +53,7 @@ namespace Blockchain.NET.Node
 
             //Console.WriteLine($"Wallet Balance is: {Wallet.GetBalance()}");
 
-            blockChain.StartMining();
+           BlockChain.StartMining();
 
             BuildWebHost(args).Run();
         }

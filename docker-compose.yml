@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+  blockchain.net.node:
+    image: blockchain.net.node
+    build:
+      context: .
+      dockerfile: Blockchain.NET.Node\Dockerfile

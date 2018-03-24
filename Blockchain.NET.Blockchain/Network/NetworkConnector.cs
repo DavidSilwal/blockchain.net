@@ -99,16 +99,24 @@ namespace Blockchain.NET.Blockchain.Network
                 {
                     if (!_networkSynchronizer.Connections.Any(c => c.IPRemoteEndPoint.Address == networkNode.IPAddress))
                     {
-                        var _connectionContainer = ConnectionFactory.CreateClientConnectionContainer(networkNode.IPAddress.ToString(), ServerPort);
+                        if (networkNode.LastConnectionAttempt < DateTime.Now.AddSeconds(-60))
+                        {
+                            if (NetworkHelper.IsPortOpen(_localIPAddress, ServerPort))
+                            {
+                                var _connectionContainer = ConnectionFactory.CreateClientConnectionContainer(networkNode.IPAddress.ToString(), ServerPort);
 
-                        _connectionContainer.ConnectionEstablished += connectionEstablished;
-                        _connectionContainer.ConnectionLost += connectionLost;
+                                _connectionContainer.ConnectionEstablished += connectionEstablished;
+                                _connectionContainer.ConnectionLost += connectionLost;
 
-                        _clientConnections.Add(_connectionContainer);
+                                _clientConnections.Add(_connectionContainer);
+                            }
+                            networkNode.LastConnectionAttempt = DateTime.Now;
+                        }
                     }
                 }
                 Thread.Sleep(4000);
             }
+            _nodeList.Save();
         }
     }
 }

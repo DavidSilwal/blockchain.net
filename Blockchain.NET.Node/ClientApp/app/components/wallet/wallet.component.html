@@ -11,13 +11,13 @@
             <div class="form-group input-group">
                 <input type="text" class="form-control" placeholder="Neue Adresse" [value]="actualAddress.key">
                 <span class="input-group-btn">
-                    <button class="btn btn-success" type="button" (click)="generateAddress()">Neue Adresse</button>
+                    <button class="btn btn-info" type="button" (click)="generateAddress()">Neue Adresse</button>
                 </span>
             </div>
         </form>
     </div>
     <div class="col-sm-6">
-        <h2>Transaktion senden</h2>
+        <h3>Transaktion senden</h3>
         <form>
             <div class="form-group">
                 <label class="sr-only" for="address">Adresse</label>
@@ -32,7 +32,7 @@
                 <label class="sr-only" for="message">Nachricht</label>
                 <textarea class="form-control" ref-textarea id="message" (input)="transaction.message = $event.target.value" [value]="transaction.message" rows="4" placeholder="Nachricht"></textarea>
             </div>
-            <button type="button" class="btn btn-default" (click)="addTransaction()">Senden</button>
+            <button type="button" class="btn btn-success" (click)="addTransaction()">Senden</button>
         </form>
     </div>
 </div>

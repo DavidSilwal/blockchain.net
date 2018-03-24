@@ -16,6 +16,8 @@ namespace Blockchain.NET.Core.Wallet
     {
         public List<Address> Addresses = new List<Address>();
 
+        public string PasswordSignature { get; set; }
+
         private string _password;
 
         private static string _walletName = "wallet.sec";
@@ -26,6 +28,18 @@ namespace Blockchain.NET.Core.Wallet
             _password = password;
             if (!string.IsNullOrEmpty(walletName))
                 _walletName = walletName + ".sec";
+        }
+
+        public void ChangePassword(string newPassword)
+        {
+            _password = newPassword;
+            PasswordSignature = HashHelper.Sha256(newPassword);
+            Save();
+        }
+
+        public bool ValidSignature(string signature)
+        {
+            return PasswordSignature == signature;
         }
 
         public void Save()
@@ -41,7 +55,7 @@ namespace Blockchain.NET.Core.Wallet
                 Directory.CreateDirectory(_rootPath);
             if (!File.Exists(Path.Combine(_rootPath, _walletName)))
             {
-                new Wallet(password).Save();
+                new Wallet(password) { PasswordSignature = HashHelper.Sha256(password) }.Save();
             }
             var wallet = SerializeHelper.Deserialize<Wallet>(AESHelper.Decrypt(File.ReadAllBytes(Path.Combine(_rootPath, _walletName)), password));
             wallet._password = password;

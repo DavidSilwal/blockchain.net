@@ -1,9 +1,10 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, OnDestroy } from '@angular/core';
 import { Http, Headers } from '@angular/http';
 import { Observable } from 'rxjs/Observable';
 import { DecimalPipe } from '@angular/common';
 import 'rxjs/add/observable/interval';
 import 'rxjs/add/operator/takeWhile';
+import { Subscription } from 'rxjs/Subscription';
 
 @Component({
     selector: 'wallet',
@@ -16,23 +17,31 @@ export class WalletComponent implements OnInit {
     public transactions: Transaction[] = [];
     public blockHeight: number = 0;
     public actualAddress: Address;
+    private subscriptions: Subscription[] = [];
 
     constructor(private http: Http, @Inject('BASE_URL') private baseUrl: string) {
         this.transaction = { address: '', amount: 0, message: '' };
+        this.actualAddress = { key: '' };
+    }
+
+    ngOnDestroy() {
+        for (let subscription of this.subscriptions) {
+            subscription.unsubscribe();
+        }
     }
 
     ngOnInit() {
-        Observable.interval(8000)
+        this.subscriptions.push(Observable.interval(8000)
             .takeWhile(() => true)
             .subscribe(i => {
                 this.reloadWalletBalance();
-            });
+            }));
         this.reloadWalletBalance();
-        Observable.interval(4000)
+        this.subscriptions.push(Observable.interval(4000)
             .takeWhile(() => true)
             .subscribe(i => {
                 this.loadTransactions();
-            });
+            }));
         this.loadTransactions();
     }
 

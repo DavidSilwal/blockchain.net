@@ -25,7 +25,6 @@ namespace Blockchain.NET.Node
         {
             Wallet = Wallet.Load("test123");
             BlockChain = new BlockChain(Wallet);
-
             //var difficulty = Math.Pow(2, 256);
 
             //int nonce = 1;

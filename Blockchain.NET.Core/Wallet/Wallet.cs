@@ -21,7 +21,7 @@ namespace Blockchain.NET.Core.Wallet
         private string _password;
 
         private static string _walletName = "wallet.sec";
-        private static string _rootPath = "Wallet";
+        private static string _rootPath = "Data";
 
         public Wallet(string password, string walletName = "")
         {

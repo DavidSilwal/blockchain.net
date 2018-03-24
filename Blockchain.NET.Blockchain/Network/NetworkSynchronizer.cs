@@ -1,18 +1,25 @@
 ﻿using Blockchain.NET.Blockchain.Network.Communication;
+using Blockchain.NET.Blockchain.Network.Helpers;
 using Network;
 using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Text;
 
 namespace Blockchain.NET.Blockchain.Network
 {
-    public class NetworkHandler
+    public class NetworkSynchronizer
     {
         private readonly BlockChain _blockChain;
+        private readonly NetworkConnector _networkConnector;
 
-        public NetworkHandler(BlockChain blockChain)
+        public List<Connection> Connections { get; set; }
+
+        public NetworkSynchronizer(BlockChain blockChain)
         {
             _blockChain = blockChain;
+            _networkConnector = new NetworkConnector(this);
+            Connections = new List<Connection>();
         }
 
         public void SyncBlockChainReceived(SyncBlockChainRequest packet, Connection connection)

@@ -25,15 +25,12 @@ namespace Blockchain.NET.Blockchain
 
         public Wallet Wallet { get; set; }
 
-        public NetworkNode Server { get; set; }
-
         private bool _isMining;
         private List<Transaction> _pendingTransactions;
 
         public BlockChain(Wallet wallet)
         {
             Wallet = wallet;
-            Server = new NetworkNode(this);
             _pendingTransactions = new List<Transaction>();
             BlockchainDbContext.InitializeMigrations();
         }

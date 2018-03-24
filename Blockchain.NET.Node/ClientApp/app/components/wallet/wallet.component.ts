@@ -45,19 +45,19 @@ export class WalletComponent implements OnInit {
         this.loadTransactions();
     }
 
-    private reloadWalletBalance() {
+    public reloadWalletBalance() {
         this.http.get(this.baseUrl + 'api/wallet/WalletBalance').subscribe(result => {
             this.walletBalance = result.json() as WalletBalance;
         }, error => console.error(error));
     }
 
-    private addTransaction() {
+    public addTransaction() {
         this.http.post(this.baseUrl + 'api/wallet/AddTransaction', this.transaction).subscribe(result => {
             this.transaction = { address: '', amount: 0, message: '' };
         }, error => console.error(error));
     }
 
-    private loadTransactions() {
+    public loadTransactions() {
         this.http.get(this.baseUrl + 'api/wallet/ActualTransactions?blockHeight=' + this.blockHeight).subscribe(result => {
             var transactions = result.json() as Transaction[];
             for (let trans of transactions) {
@@ -67,7 +67,7 @@ export class WalletComponent implements OnInit {
         }, error => console.error(error));
     }
 
-    private generateAddress() {
+    public generateAddress() {
         this.http.get(this.baseUrl + 'api/wallet/GenerateAddress').subscribe(result => {
             this.actualAddress = result.json() as Address;
         }, error => console.error(error));

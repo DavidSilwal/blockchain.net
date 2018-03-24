@@ -33,7 +33,7 @@ namespace Blockchain.NET.Blockchain
         public BlockChain(Wallet wallet)
         {
             Wallet = wallet;
-            //Server = new NetworkNode(this);
+            Server = new NetworkNode(this);
             _pendingTransactions = new List<Transaction>();
             BlockchainDbContext.InitializeMigrations();
         }

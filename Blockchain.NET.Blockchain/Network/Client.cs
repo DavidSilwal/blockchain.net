@@ -43,11 +43,11 @@ namespace Blockchain.NET.Blockchain.Network
                     var lastBlock = _blockChain.LastBlock();
                     if (lastBlock.Height < syncResponse.LastBlockNumber)
                     {
-                        //Parallel.For(lastBlock.Index + 1, syncResponse.LastBlockNumber, index =>
-                        //  {
-                        //      var blockResponse = connection.SendAsync<GetBlockResponse>(new GetBlockRequest(index)).Result;
-                        //      _blockChain.AddBlock(blockResponse.Block, blockResponse.Block.Hash);
-                        //  });
+                        Parallel.For(lastBlock.Height + 1, syncResponse.LastBlockNumber, index =>
+                          {
+                              var blockResponse = connection.SendAsync<GetBlockResponse>(new GetBlockRequest(index)).Result;
+                              _blockChain.AddBlock(blockResponse.Block);
+                          });
                     }
                 }
                 Thread.Sleep(1000);

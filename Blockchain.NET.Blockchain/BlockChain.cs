@@ -66,6 +66,7 @@ namespace Blockchain.NET.Blockchain
                     _pendingTransactions = new List<Transaction>();
                 }
                 var difficulty = lastBlock == null ? 5 : lastBlock.Difficulty;
+                //TODO: Reactivate audo difficulty calculation
                 //if (lastBlock != null && lastBlock.Height > 1 && lastBlock.Height % DifficultyCorrectureInterval == 1)
                 //{
                 //    var lowTime = GetBlock(lastBlock.Height - DifficultyCorrectureInterval).TimeStamp;
@@ -117,7 +118,7 @@ namespace Blockchain.NET.Blockchain
             }
         }
 
-        public bool AddTransaction(Transaction transaction)
+        public void AddTransaction(Transaction transaction)
         {
             if (transaction.Verify())
             {
@@ -140,13 +141,23 @@ namespace Blockchain.NET.Blockchain
                             if (!everUsedAsInput)
                             {
                                 _pendingTransactions.Add(transaction);
-                                return true;
                             }
+                            else
+                            {
+                                throw new Exception("Eine der Adressen wurde bereits als Input verwendet!");
+                            }
+                        }
+                        else
+                        {
+                            throw new Exception("Nicht genug Guthaben!");
                         }
                     }
                 }
             }
-            return false;
+            else
+            {
+                throw new Exception("Nicht valide Transaktion!");
+            }
         }
 
         #endregion

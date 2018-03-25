@@ -11,17 +11,16 @@ namespace Blockchain.NET.Core.Helpers.Cryptography
         public const int RSAKeySize = 2048;
         public static string SignData(string message, string privateKey)
         {
-            var encoding = new ASCIIEncoding();
             byte[] signedBytes;
             using (RSA rsa = RSA.Create(RSAKeySize))
             {
-                byte[] originalData = encoding.GetBytes(message);
+                byte[] originalData = Encoding.Unicode.GetBytes(message);
 
                 try
                 {
                     rsa.ImportParameters(ToRSAParameters(privateKey));
 
-                    signedBytes = rsa.SignData(originalData, HashAlgorithmName.SHA512, RSASignaturePadding.Pss);
+                    signedBytes = rsa.SignData(originalData, HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1);
                 }
                 catch (CryptographicException e)
                 {
@@ -38,17 +37,16 @@ namespace Blockchain.NET.Core.Helpers.Cryptography
 
         public static bool VerifyData(string originalMessage, string signedMessage, string publicKey)
         {
-            var encoding = new ASCIIEncoding();
             bool success = false;
             using (RSA rsa = RSA.Create(RSAKeySize))
             {
-                byte[] bytesToVerify = encoding.GetBytes(originalMessage);
+                byte[] bytesToVerify = Encoding.Unicode.GetBytes(originalMessage);
                 byte[] signedBytes = Convert.FromBase64String(signedMessage);
                 try
                 {
                     rsa.ImportParameters(ToRSAParameters(publicKey));
 
-                    success = rsa.VerifyData(bytesToVerify, signedBytes, HashAlgorithmName.SHA512, RSASignaturePadding.Pss);
+                    success = rsa.VerifyData(bytesToVerify, signedBytes, HashAlgorithmName.SHA512, RSASignaturePadding.Pkcs1);
                 }
                 catch (CryptographicException e)
                 {

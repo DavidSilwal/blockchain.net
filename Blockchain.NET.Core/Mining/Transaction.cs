@@ -46,6 +46,7 @@ namespace Blockchain.NET.Core.Mining
                 foreach (var input in Inputs)
                 {
                     var foundAddress = wallet.Addresses.FirstOrDefault(a => a.Key == input.Key);
+                    
                     if (foundAddress != null)
                     {
                         input.Signature = RSAHelper.SignData(GenerateHash(), foundAddress.PrivateKey);

@@ -19,9 +19,15 @@ namespace Blockchain.NET.Node.Controllers
         [HttpPost("[action]")]
         public IActionResult AddTransaction([FromBody] TransactionRequest request)
         {
-            if (Program.BlockChain.AddTransaction(Program.Wallet.CreateTransaction(request.Address, request.Amount, request.Message)))
+            try
+            {
+                Program.BlockChain.AddTransaction(Program.Wallet.CreateTransaction(request.Address, request.Amount, request.Message));
                 return Ok();
-            return BadRequest();
+            }
+            catch (Exception exc)
+            {
+                return BadRequest(new { error = exc.Message });
+            }
         }
 
         [HttpGet("[action]")]

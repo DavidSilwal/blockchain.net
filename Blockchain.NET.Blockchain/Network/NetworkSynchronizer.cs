@@ -20,6 +20,7 @@ namespace Blockchain.NET.Blockchain.Network
             _blockChain = blockChain;
             _networkConnector = new NetworkConnector(this);
             Connections = new List<Connection>();
+            _networkConnector.Start();
         }
 
         public void SyncBlockChainReceived(SyncBlockChainRequest packet, Connection connection)

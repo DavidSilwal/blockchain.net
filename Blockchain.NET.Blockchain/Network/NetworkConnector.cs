@@ -46,6 +46,7 @@ namespace Blockchain.NET.Blockchain.Network
                     _serverConnection.ConnectionLost += connectionLost;
                     _serverConnection.AllowUDPConnections = false;
                     _serverConnection.Start();
+                    new Thread(establishConnections).Start();
                 }
             }
         }

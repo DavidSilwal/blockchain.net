@@ -1,8 +1,28 @@
 {
   "Nodes": [
     {
+      "NodeEnpointAddress": "85.7.212.63",
+      "LastConnectionAttempt": "2018-03-24T14:01:59.5280017+01:00"
+    },
+    {
       "NodeEnpointAddress": "10.30.6.227",
-      "LastConnectionAttempt": "2018-03-24T11:43:37.8090522+01:00"
+      "LastConnectionAttempt": "2018-03-24T14:02:07.5486611+01:00"
+    },
+    {
+      "NodeEnpointAddress": "10.30.6.227",
+      "LastConnectionAttempt": "0001-01-01T00:00:00"
+    },
+    {
+      "NodeEnpointAddress": "10.30.6.227",
+      "LastConnectionAttempt": "0001-01-01T00:00:00"
+    },
+    {
+      "NodeEnpointAddress": "10.30.6.227",
+      "LastConnectionAttempt": "0001-01-01T00:00:00"
+    },
+    {
+      "NodeEnpointAddress": "10.30.6.227",
+      "LastConnectionAttempt": "0001-01-01T00:00:00"
     }
   ]
 }

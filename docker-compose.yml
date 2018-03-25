@@ -4,7 +4,7 @@ services:
   blockchain.net.node:
     image: blockchain.net.node
     ports:
-      - 5000:5000
+      - 5000:80
     build:
       context: .
       dockerfile: Blockchain.NET.Node/Dockerfile

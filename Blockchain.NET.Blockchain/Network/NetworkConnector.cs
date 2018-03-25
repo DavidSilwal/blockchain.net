@@ -102,7 +102,7 @@ namespace Blockchain.NET.Blockchain.Network
                     {
                         if (networkNode.LastConnectionAttempt < DateTime.Now.AddSeconds(-60))
                         {
-                            if (NetworkHelper.IsPortOpen(_localIPAddress, ServerPort))
+                            if (NetworkHelper.IsPortOpen(networkNode.IPAddress, ServerPort))
                             {
                                 var _connectionContainer = ConnectionFactory.CreateClientConnectionContainer(networkNode.IPAddress.ToString(), ServerPort);
 

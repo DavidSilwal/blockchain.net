@@ -18,6 +18,7 @@ export class WalletComponent implements OnInit {
     public blockHeight: number = 0;
     public actualAddress: Address;
     private subscriptions: Subscription[] = [];
+    public transactionError: string;
 
     constructor(private http: Http, @Inject('BASE_URL') private baseUrl: string) {
         this.transaction = { address: '', amount: 0, message: '' };
@@ -53,8 +54,9 @@ export class WalletComponent implements OnInit {
 
     public addTransaction() {
         this.http.post(this.baseUrl + 'api/wallet/AddTransaction', this.transaction).subscribe(result => {
+            this.transactionError = '';
             this.transaction = { address: '', amount: 0, message: '' };
-        }, error => console.error(error));
+        }, error => { this.transactionError = JSON.parse(error._body).error; });
     }
 
     public loadTransactions() {

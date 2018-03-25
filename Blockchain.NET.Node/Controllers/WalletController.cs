@@ -22,6 +22,7 @@ namespace Blockchain.NET.Node.Controllers
             try
             {
                 Program.BlockChain.AddTransaction(Program.Wallet.CreateTransaction(request.Address, request.Amount, request.Message));
+
                 return Ok();
             }
             catch (Exception exc)

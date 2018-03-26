@@ -7,6 +7,7 @@ services:
        - D:\Docker\Blockchain.NET\Data:/app/Data
     ports:
       - 5000:80
+      - 1234:1234
     build:
       context: .
       dockerfile: Blockchain.NET.Node/Dockerfile

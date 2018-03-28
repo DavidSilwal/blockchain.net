@@ -15,12 +15,12 @@ namespace Blockchain.NET.Blockchain.Network.Communication
 
         }
 
-        public SyncBlockChainResponse(int lastBlockNumber, RequestPacket request)
+        public SyncBlockChainResponse(int lastBlockHeight, RequestPacket request)
             : base(request)
         {
-            this.LastBlockNumber = lastBlockNumber;
+            this.LastBlockHeight = lastBlockHeight;
         }
 
-        public int LastBlockNumber { get; set; }
+        public int LastBlockHeight { get; set; }
     }
 }

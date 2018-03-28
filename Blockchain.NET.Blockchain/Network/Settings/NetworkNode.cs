@@ -21,5 +21,8 @@ namespace Blockchain.NET.Blockchain.Network.Settings
         }
 
         public DateTime LastConnectionAttempt { get; set; }
+
+        [JsonIgnore]
+        public bool IsConnected { get; set; }
     }
 }

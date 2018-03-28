@@ -9,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Blockchain.NET.Blockchain.Network
 {
@@ -18,9 +19,9 @@ namespace Blockchain.NET.Blockchain.Network
         private readonly NodeList _nodeList;
         private readonly IPAddress _localIPAddress;
 
-        private List<ClientConnectionContainer> _clientConnections;
-
         private ServerConnectionContainer _serverConnection;
+
+        public static bool IsMainNode { get; set; }
 
         public int ServerPort { get; set; } = 1234;
 
@@ -37,87 +38,82 @@ namespace Blockchain.NET.Blockchain.Network
         {
             if (!_isRunning)
             {
-                _clientConnections = new List<ClientConnectionContainer>();
                 _isRunning = true;
-                if (_serverConnection == null)
+                if (_serverConnection == null && IsMainNode)
                 {
                     _serverConnection = ConnectionFactory.CreateServerConnectionContainer(ServerPort, false);
                     _serverConnection.ConnectionEstablished += connectionEstablished;
                     _serverConnection.ConnectionLost += connectionLost;
                     _serverConnection.AllowUDPConnections = false;
                     _serverConnection.Start();
-                    new Thread(establishConnections).Start();
                 }
+                if (!IsMainNode)
+                    new Thread(establishConnections).Start();
             }
         }
 
         public void Stop()
         {
             _serverConnection.Stop();
-            foreach (var clientConnection in _clientConnections)
+            foreach (var connection in _networkSynchronizer.Connections)
             {
-                clientConnection.Shutdown(CloseReason.ServerClosed);
+                connection.Close(CloseReason.ServerClosed);
             }
+
             _isRunning = false;
         }
 
         private void connectionEstablished(Connection connection, ConnectionType type)
         {
-            Console.WriteLine($"{connection.IPRemoteEndPoint.Address} {connection.GetType()} connected on port {connection.IPRemoteEndPoint.Port}");
-
-            connection.RegisterStaticPacketHandler<SyncBlockChainRequest>(_networkSynchronizer.SyncBlockChainReceived);
-            connection.RegisterStaticPacketHandler<GetBlockRequest>(_networkSynchronizer.GetBlockRequestReceived);
-
-            _networkSynchronizer.Connections.Add(connection);
-
-            if (!_nodeList.Nodes.Any(n => n.IPAddress == connection.IPRemoteEndPoint.Address))
+            if (type == ConnectionType.TCP)
             {
-                _nodeList.Nodes.Add(new NetworkNode() { IPAddress = connection.IPRemoteEndPoint.Address });
-                _nodeList.Save();
+                Console.WriteLine($"{connection.IPRemoteEndPoint.Address} {connection.GetType()} connected on port {connection.IPRemoteEndPoint.Port}");
+
+                connection.RegisterStaticPacketHandler<SyncBlockChainRequest>(_networkSynchronizer.SyncBlockChainReceived);
+                connection.RegisterStaticPacketHandler<LoadBlockRequest>(_networkSynchronizer.LoadBlockReceived);
+
+                _networkSynchronizer.Connections.Add(connection);
             }
         }
 
         private void connectionLost(Connection connection, ConnectionType type, CloseReason reason)
         {
-            Console.WriteLine($"{connection.IPRemoteEndPoint.Address} {connection.GetType()} connection lost");
-
-            _networkSynchronizer.Connections.Remove(connection);
-
-            _clientConnections.Remove(_clientConnections.First(c => c.TcpConnection.IPRemoteEndPoint.Address == connection.IPRemoteEndPoint.Address));
-
-            if (!_nodeList.Nodes.Any(n => n.IPAddress == connection.IPRemoteEndPoint.Address))
+            if (type == ConnectionType.TCP && reason != CloseReason.InvalidUdpRequest)
             {
-                _nodeList.Nodes.Add(new NetworkNode() { IPAddress = connection.IPRemoteEndPoint.Address });
-                _nodeList.Save();
+                _networkSynchronizer.Connections.Remove(connection);
+
+                //if (connection != null && connection.IPRemoteEndPoint != null)
+                //{
+                //    var foundNetworknode = _nodeList.Nodes.FirstOrDefault(n => n.NodeEnpointAddress == connection.IPRemoteEndPoint.Address.ToString());
+                //    if (foundNetworknode != null)
+                //        foundNetworknode.IsConnected = false;
+                //}
             }
         }
 
-        private void establishConnections()
+        private async void establishConnections()
         {
             while (_isRunning)
             {
-                foreach (var networkNode in _nodeList.Nodes.Where(nl => nl.IPAddress != _localIPAddress))
+                foreach (var networkNode in _nodeList.Nodes.Where(nl => !nl.IsConnected))
                 {
-                    if (!_networkSynchronizer.Connections.Any(c => c.IPRemoteEndPoint.Address == networkNode.IPAddress))
+                    if (networkNode.LastConnectionAttempt < DateTime.Now.AddSeconds(-60))
                     {
-                        if (networkNode.LastConnectionAttempt < DateTime.Now.AddSeconds(-60))
+                        if (NetworkHelper.IsPortOpen(networkNode.IPAddress, ServerPort))
                         {
-                            if (NetworkHelper.IsPortOpen(networkNode.IPAddress, ServerPort))
-                            {
-                                var _connectionContainer = ConnectionFactory.CreateClientConnectionContainer(networkNode.IPAddress.ToString(), ServerPort);
+                            var _connectionContainer = ConnectionFactory.CreateClientConnectionContainer(networkNode.IPAddress.ToString(), ServerPort);
 
-                                _connectionContainer.ConnectionEstablished += connectionEstablished;
-                                _connectionContainer.ConnectionLost += connectionLost;
+                            _connectionContainer.ConnectionEstablished += connectionEstablished;
+                            _connectionContainer.ConnectionLost += connectionLost;
 
-                                _clientConnections.Add(_connectionContainer);
-                            }
-                            networkNode.LastConnectionAttempt = DateTime.Now;
+                            networkNode.IsConnected = true;
                         }
+                        //networkNode.LastConnectionAttempt = DateTime.Now;
                     }
+
                 }
-                Thread.Sleep(4000);
+                await Task.Delay(4000);
             }
-            _nodeList.Save();
         }
     }
 }

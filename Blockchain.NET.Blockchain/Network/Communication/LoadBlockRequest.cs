@@ -7,11 +7,13 @@ using System.Text;
 
 namespace Blockchain.NET.Blockchain.Network.Communication
 {
-    public class SyncBlockChainRequest : RequestPacket
+    public class LoadBlockRequest : RequestPacket
     {
-        public SyncBlockChainRequest()
+        public LoadBlockRequest(int blockHeight)
         {
-
+            BlockHeight = blockHeight;
         }
+
+        public int BlockHeight { get; set; }
     }
 }

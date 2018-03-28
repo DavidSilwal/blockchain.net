@@ -85,6 +85,8 @@ namespace Blockchain.NET.Blockchain
         #region MODIFICATION
         public void AddBlock(Block block)
         {
+            if (block == null)
+                return;
             //Check if Proof of Work is correct
             if (block.GenerateHash().Substring(0, block.Difficulty).All(c => c == '0'))
             {

@@ -1,5 +1,4 @@
-﻿using Blockchain.NET.Core;
-using Blockchain.NET.Core.Mining;
+﻿using Blockchain.NET.Core.Mining;
 using Network;
 using Network.Attributes;
 using Network.Packets;
@@ -9,15 +8,15 @@ using System.Text;
 
 namespace Blockchain.NET.Blockchain.Network.Communication
 {
-    [PacketRequest(typeof(GetBlockRequest))]
-    public class GetBlockResponse : ResponsePacket
+    [PacketRequest(typeof(LoadBlockRequest))]
+    public class LoadBlockResponse : ResponsePacket
     {
-        public GetBlockResponse()
+        public LoadBlockResponse()
         {
 
         }
 
-        public GetBlockResponse(Block block, RequestPacket request)
+        public LoadBlockResponse(Block block, RequestPacket request)
             : base(request)
         {
             Block = block;

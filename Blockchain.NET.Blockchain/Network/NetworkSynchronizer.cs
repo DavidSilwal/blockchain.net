@@ -109,8 +109,6 @@ namespace Blockchain.NET.Blockchain.Network
                 {
                     var from = nextBlockHeight;
                     var to = resultRemoteChainStates.Select(t => t.Item2).Max();
-                    if (to > from + 40)
-                        to = from + 40;
                     loadBlocks(resultRemoteChainStates, from, to);
                 }
                 else
@@ -120,20 +118,28 @@ namespace Blockchain.NET.Blockchain.Network
 
         private void loadBlocks(List<Tuple<NodeConnection, int>> resultRemoteChainStates, int from, int to)
         {
-            var tasks = new List<Task<Block>>();
-            for (int i = from; i <= to; i++)
+            var tasks = new List<Task<List<Block>>>();
+            var requestCount = 0;
+            while (true)
             {
-                var connection = resultRemoteChainStates.Where(rc => rc.Item2 >= i).OrderBy(x => rnd.Next()).FirstOrDefault();
-                if (connection != null)
-                {
-                    tasks.Add(connection.Item1.GetBlock(i));
-                }
+                var connection = resultRemoteChainStates.Where(rc => rc.Item2 >= from).OrderBy(x => rnd.Next()).FirstOrDefault();
+                var newTo = from + 100;
+                if (newTo > to)
+                    newTo = to;
+                tasks.Add(connection.Item1.GetBlocks(Enumerable.Range(from, newTo).ToList()));
+                requestCount++;
+                from = newTo + 1;
+                if (newTo >= to || requestCount >= _connections.Count)
+                    break;
             }
             Task.WaitAll(tasks.ToArray());
             foreach (var taskResult in tasks.Select(t => t.Result))
             {
                 if (taskResult != null)
-                    _blockChain.AddBlock(taskResult);
+                {
+                    foreach (var block in taskResult)
+                        _blockChain.AddBlock(block);
+                }
             }
         }
 
@@ -193,9 +199,9 @@ namespace Blockchain.NET.Blockchain.Network
         {
             if (_connections != null)
                 foreach (var connection in _connections.ToList())
-            {
-                await connection.PushTransaction(transaction);
-            }
+                {
+                    await connection.PushTransaction(transaction);
+                }
         }
     }
 }

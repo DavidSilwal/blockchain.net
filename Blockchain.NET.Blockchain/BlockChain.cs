@@ -28,9 +28,9 @@ namespace Blockchain.NET.Blockchain
             {
                 if (_nextBlock == null)
                 {
-                    return 1;
+                    _nextBlock = LastBlock();
                 }
-                return _nextBlock.Height;
+                return _nextBlock == null ? 1 : _nextBlock.Height;
             }
         }
 
@@ -288,6 +288,18 @@ namespace Blockchain.NET.Blockchain
                     return db.Blocks.Include("Transactions.Outputs").Include("Transactions.Inputs").FirstOrDefault(b => b.Height == height);
                 }
                 return db.Blocks.FirstOrDefault(b => b.Height == height);
+            }
+        }
+
+        public List<Block> GetBlocks(List<int> blockHeights, bool includeTransactions = false)
+        {
+            using (BlockchainDbContext db = new BlockchainDbContext())
+            {
+                if (includeTransactions)
+                {
+                    return db.Blocks.Include("Transactions.Outputs").Include("Transactions.Inputs").Where(b => blockHeights.Contains(b.Height)).ToList();
+                }
+                return db.Blocks.Where(b => blockHeights.Contains(b.Height)).ToList();
             }
         }
 

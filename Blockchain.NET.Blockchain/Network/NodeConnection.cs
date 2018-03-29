@@ -112,6 +112,30 @@ namespace Blockchain.NET.Blockchain.Network
             }
         }
 
+        public async Task<List<Block>> GetBlocks(List<int> blockHeights)
+        {
+            try
+            {
+                using (HttpClient client = new HttpClient())
+                {
+                    string apiRoute = BaseApiRoute + $"/getblocks";
+                    client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+                    using (HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Post, apiRoute))
+                    {
+                        request.Content = new StringContent(JsonConvert.SerializeObject(blockHeights), Encoding.UTF8, "application/json");
+                        var response = await client.SendAsync(request);
+                        return JsonConvert.DeserializeObject<List<Block>>(await response.Content.ReadAsStringAsync());
+                    }
+                }
+            }
+            catch (Exception exc)
+            {
+                return null;
+            }
+
+        }
+
         public async Task<List<Transaction>> GetTransactions(List<string> hashes)
         {
             try

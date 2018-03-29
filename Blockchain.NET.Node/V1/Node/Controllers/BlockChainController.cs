@@ -50,6 +50,12 @@ namespace Blockchain.NET.Node.V1.Node.Controllers
         }
 
         [HttpPost("[action]")]
+        public JsonResult GetBlocks([FromBody]List<int> blockHeights)
+        {
+            return Json(Program.BlockChain.GetBlocks(blockHeights, true), new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore });
+        }
+
+        [HttpPost("[action]")]
         public IActionResult PushBlock([FromBody]Block block)
         {
             if (Program.BlockChain.PushBlock(block))

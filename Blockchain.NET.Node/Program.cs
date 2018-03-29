@@ -49,8 +49,10 @@ namespace Blockchain.NET.Node
             //    }
             //    nonce++;
             //}
-
+#if DEBUG
+#else
             BlockChain.StartMining();
+#endif
 
             //Console.ReadLine();
 

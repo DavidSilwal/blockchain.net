@@ -43,16 +43,17 @@ namespace Blockchain.NET.Core.Mining
 
         public string CreateMerkleTreeHash()
         {
-            if (Transactions.Count > 0)
-            {
-                var merkleTreeList = Transactions.Select(t => t.GenerateHash()).ToList();
-                while (merkleTreeList.Count > 1)
+            if (Transactions != null)
+                if (Transactions.Count > 0)
                 {
-                    merkleTreeList.Add(HashHelper.Sha256(merkleTreeList[0] + merkleTreeList[1]));
-                    merkleTreeList.RemoveRange(0, 2);
+                    var merkleTreeList = Transactions.Select(t => t.GenerateHash()).ToList();
+                    while (merkleTreeList.Count > 1)
+                    {
+                        merkleTreeList.Add(HashHelper.Sha256(merkleTreeList[0] + merkleTreeList[1]));
+                        merkleTreeList.RemoveRange(0, 2);
+                    }
+                    return merkleTreeList[0];
                 }
-                return merkleTreeList[0];
-            }
             return string.Empty;
         }
 
@@ -66,7 +67,11 @@ namespace Blockchain.NET.Core.Mining
                 var totalHashesCounter = 0;
                 DateTime startTime = DateTime.Now;
 
-                Task[] miningTasks = new Task[1]; // Task[] miningTasks = new Task[Environment.ProcessorCount];
+#if DEBUG
+                Task[] miningTasks = new Task[1];
+#else
+                Task[] miningTasks = new Task[Environment.ProcessorCount];
+#endif
                 var difficultyValue = string.Join("0", new string[difficulty + 1]);
                 for (int i = 0; i < miningTasks.Length; i++)
                 {
@@ -84,7 +89,7 @@ namespace Blockchain.NET.Core.Mining
                             startNonce = startNonce + miningTasks.Length;
                             taskHash = GenerateHash(startNonce);
                             totalHashesCounter++;
-                            if(totalHashesCounter % 200000 == 0)
+                            if (totalHashesCounter % 200000 == 0)
                             {
                                 var currentElapsedTime = DateTime.Now - startTime;
                                 BlockchainConsole.WriteLive($"MINING BLOCK - ELAPSED TIME: {currentElapsedTime.TotalSeconds} Seconds, DIFFICULTY: {difficulty}, HASH RATE: {Convert.ToInt64(totalHashesCounter / currentElapsedTime.TotalSeconds)}/Seconds");
@@ -120,6 +125,11 @@ namespace Blockchain.NET.Core.Mining
         public override string ToString()
         {
             return $"BlockNumber: {Height}, Hash: {GenerateHash()}";
+        }
+
+        public string ToJson()
+        {
+            return JsonConvert.SerializeObject(this, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore }); 
         }
     }
 }

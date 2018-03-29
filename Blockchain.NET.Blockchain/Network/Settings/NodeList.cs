@@ -1,5 +1,4 @@
-﻿using Blockchain.NET.Blockchain.Network.Helpers;
-using Blockchain.NET.Core.Helpers;
+﻿using Blockchain.NET.Core.Helpers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,7 +31,6 @@ namespace Blockchain.NET.Blockchain.Network.Settings
             if (!File.Exists(Path.Combine(_rootPath, _configName)))
             {
                 var nodesList = new NodeList();
-                nodesList.Nodes.Add(new NetworkNode() { IPAddress = NetworkHelper.GetLocalIPAddress(), LastConnectionAttempt = DateTime.Now });
                 nodesList.Save();
             }
             var nodeList = SerializeHelper.Deserialize<NodeList>(File.ReadAllText(Path.Combine(_rootPath, _configName)));

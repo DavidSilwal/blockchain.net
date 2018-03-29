@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SpaServices.Webpack;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Blockchain.NET.Node
 {
@@ -23,6 +24,11 @@ namespace Blockchain.NET.Node
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddMvc();
+            services.AddApiVersioning(o => {
+                o.ReportApiVersions = true;
+                o.AssumeDefaultVersionWhenUnspecified = true;
+                o.DefaultApiVersion = new ApiVersion(1, 0);
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

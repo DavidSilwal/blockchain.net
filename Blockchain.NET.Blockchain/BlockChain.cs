@@ -22,17 +22,43 @@ namespace Blockchain.NET.Blockchain
         public decimal MiningReward { get; set; } = 1000;
         public int DifficultyCorrectureInterval { get; private set; } = 10;
         public int DifficultyTimeTarget { get; private set; } = 20;
+        public int NextBlockHeight
+        {
+            get
+            {
+                if (_nextBlock == null)
+                {
+                    return 1;
+                }
+                return _nextBlock.Height;
+            }
+        }
+
+        public List<Transaction> MemPool
+        {
+            get
+            {
+                return _memPool;
+            }
+            set
+            {
+                _memPool = value;
+            }
+        }
 
         public Wallet Wallet { get; set; }
 
         private bool _isMining;
-        private List<Transaction> _pendingTransactions;
+        private List<Transaction> _memPool;
+        private NetworkSynchronizer _networkSynchronizer;
+        private Block _nextBlock;
 
         public BlockChain(Wallet wallet)
         {
             Wallet = wallet;
-            _pendingTransactions = new List<Transaction>();
+            _memPool = new List<Transaction>();
             BlockchainDbContext.InitializeMigrations();
+            _networkSynchronizer = new NetworkSynchronizer(this);
         }
 
         #region MINING
@@ -57,13 +83,18 @@ namespace Blockchain.NET.Blockchain
             {
                 var lastBlock = LastBlock();
 
-                Block nextBlock = null;
-                lock (_pendingTransactions)
+                lock (_memPool)
                 {
                     var miningAddress = Wallet.NewAddress();
                     AddTransaction(new Transaction(null, Wallet, new[] { new Output(miningAddress.Key, MiningReward) }.ToList()));
-                    nextBlock = lastBlock == null ? new Block(1, null, _pendingTransactions) : new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), _pendingTransactions);
-                    _pendingTransactions = new List<Transaction>();
+                    using (BlockchainDbContext db = new BlockchainDbContext())
+                    {
+                        var mempoolHashes = _memPool.Select(m => m.GenerateHash());
+                        var existingTransactionsInBlockchain = db.Transactions.Where(t => mempoolHashes.Contains(t.Hash)).ToList();
+                        existingTransactionsInBlockchain.ForEach(t => _memPool.Remove(_memPool.First(m => m.Hash == t.Hash)));
+                        _nextBlock = lastBlock == null ? new Block(1, null, _memPool.ToList()) : new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), _memPool.ToList());
+                    }
+
                 }
                 var difficulty = lastBlock == null ? 5 : lastBlock.Difficulty;
                 //TODO: Reactivate audo difficulty calculation
@@ -74,19 +105,48 @@ namespace Blockchain.NET.Blockchain
 
                 //    difficulty = Convert.ToInt32(lastBlock.Difficulty * DifficultyTimeTarget / ((highTime - lowTime).TotalSeconds / DifficultyCorrectureInterval));
                 //}
-                nextBlock.MineBlock(difficulty);
-                AddBlock(nextBlock);
-                BlockchainConsole.WriteLine($"MINED BLOCK: {nextBlock}", ConsoleEventType.MINEDBLOCK);
+                _nextBlock.MineBlock(difficulty);
+                AddBlock(_nextBlock);
+                BlockchainConsole.WriteLine($"MINED BLOCK: {_nextBlock}", ConsoleEventType.MINEDBLOCK);
             }
         }
 
         #endregion
 
+        #region Syncronizing
+
+        public void StartSyncronizing()
+        {
+            if (!_networkSynchronizer.IsSyncing)
+            {
+                _networkSynchronizer.Start();
+            }
+        }
+
+        public void StopSyncronizing()
+        {
+            _networkSynchronizer.Stop();
+        }
+
+        #endregion
+
         #region MODIFICATION
-        public void AddBlock(Block block)
+
+        public bool PushBlock(Block block)
+        {
+            if (AddBlock(block))
+            {
+                if (_nextBlock != null)
+                    _nextBlock.StopMining();
+                return true;
+            }
+            return false;
+        }
+
+        public bool AddBlock(Block block)
         {
             if (block == null)
-                return;
+                return false;
             //Check if Proof of Work is correct
             if (block.GenerateHash().Substring(0, block.Difficulty).All(c => c == '0'))
             {
@@ -111,13 +171,31 @@ namespace Blockchain.NET.Blockchain
                         {
                             using (BlockchainDbContext db = new BlockchainDbContext())
                             {
-                                db.Blocks.Add(block);
-                                db.SaveChanges();
+                                var existingBlock = db.Blocks.FirstOrDefault(b => b.Height == block.Height);
+                                if (existingBlock == null)
+                                {
+                                    var findLastBlock = block.Height == 1 ? null : db.Blocks.FirstOrDefault(b => b.Height == block.Height - 1);
+                                    if (block.Height == 1 || (findLastBlock != null && findLastBlock.GenerateHash() == block.PreviousHash))
+                                    {
+                                        db.Blocks.Add(block);
+                                        db.SaveChanges();
+                                        foreach (var transactionToDelete in block.Transactions)
+                                        {
+                                            var foundTransaction = _memPool.FirstOrDefault(t => t.GenerateHash() == transactionToDelete.GenerateHash());
+                                            if (foundTransaction != null)
+                                                _memPool.Remove(foundTransaction);
+                                        }
+                                        block.StopMining();
+                                        _networkSynchronizer.BroadcastBlock(block);
+                                        return true;
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
+            return false;
         }
 
         public void AddTransaction(Transaction transaction)
@@ -130,7 +208,7 @@ namespace Blockchain.NET.Blockchain
                     // If Coinbase transaction no validity
                     if (transaction.Inputs == null)
                     {
-                        _pendingTransactions.Add(transaction);
+                        _memPool.Add(transaction);
                     }
                     else
                     {
@@ -142,7 +220,11 @@ namespace Blockchain.NET.Blockchain
                             // Check if ever used as input before
                             if (!everUsedAsInput)
                             {
-                                _pendingTransactions.Add(transaction);
+                                if (!_memPool.Select(mp => mp.GenerateHash()).Any(t => t == transaction.GenerateHash()))
+                                {
+                                    _memPool.Add(transaction);
+                                    _networkSynchronizer.BroadcastTransaction(transaction);
+                                }
                             }
                             else
                             {
@@ -197,10 +279,14 @@ namespace Blockchain.NET.Blockchain
             return null;
         }
 
-        public Block GetBlock(int height)
+        public Block GetBlock(int height, bool includeTransactions = false)
         {
             using (BlockchainDbContext db = new BlockchainDbContext())
             {
+                if (includeTransactions)
+                {
+                    return db.Blocks.Include("Transactions.Outputs").Include("Transactions.Inputs").FirstOrDefault(b => b.Height == height);
+                }
                 return db.Blocks.FirstOrDefault(b => b.Height == height);
             }
         }

@@ -22,19 +22,16 @@ namespace Blockchain.NET.Node
 
         public static BlockChain BlockChain { get; set; }
 
-        public static NetworkSynchronizer NetworkSynchronizer { get; set; }
-
         public static void Main(string[] args)
         {
             Wallet = Wallet.Load("test123");
             BlockChain = new BlockChain(Wallet);
+            BlockChain.StartSyncronizing();
 
-            NetworkConnector.IsMainNode = true;
-            NetworkSynchronizer = new NetworkSynchronizer(BlockChain);
-            NetworkSynchronizer.Start();
+            //NetworkConnector.IsMainNode = true;
 
             //RSAHelper.test();
-            Console.ReadLine();
+            //Console.ReadLine();
 
 
 
@@ -53,11 +50,11 @@ namespace Blockchain.NET.Node
             //    nonce++;
             //}
 
-            //BlockChain.StartMining();
+            BlockChain.StartMining();
 
             //Console.ReadLine();
 
-            //BuildWebHost(args).Run();
+            BuildWebHost(args).Run();
         }
 
         public static IWebHost BuildWebHost(string[] args) =>

@@ -1,5 +1,5 @@
-﻿using Blockchain.NET.Blockchain.Network.Communication;
-using Blockchain.NET.Blockchain.Network.Helpers;
+﻿using Blockchain.NET.Blockchain.Network.Settings;
+using Blockchain.NET.Core.Mining;
 using Network;
 using System;
 using System.Collections.Generic;
@@ -14,99 +14,187 @@ namespace Blockchain.NET.Blockchain.Network
     public class NetworkSynchronizer
     {
         private readonly BlockChain _blockChain;
-        private readonly NetworkConnector _networkConnector;
 
         private Thread _syncBlockChainThread;
+        private Thread _connectNodesThread;
+        private Thread _transactionsThread;
 
-        public List<Connection> Connections { get; set; }
-
-        public bool IsActive { get; set; }
+        public bool IsSyncing { get; set; }
         private static Random rnd = new Random();
+
+        private NodeList _nodeList;
+        private List<NodeConnection> _connections;
 
         public NetworkSynchronizer(BlockChain blockChain)
         {
             _blockChain = blockChain;
-            _networkConnector = new NetworkConnector(this);
-            Connections = new List<Connection>();
+            _nodeList = NodeList.Load();
         }
 
         public void Start()
         {
-            if (!IsActive)
+            if (!IsSyncing)
             {
-                IsActive = true;
-                _networkConnector.Start();
+                IsSyncing = true;
                 if (_syncBlockChainThread == null || _syncBlockChainThread.ThreadState != ThreadState.Running)
-                    _syncBlockChainThread = new Thread(syncBlockChainThread);
+                {
+                    _syncBlockChainThread = new Thread(syncBlocksThread);
+                    _connectNodesThread = new Thread(connectNodesThread);
+                    _transactionsThread = new Thread(syncTransactionsThread);
+                }
                 _syncBlockChainThread.Start();
+                _connectNodesThread.Start();
             }
         }
 
         public void Stop()
         {
-            IsActive = false;
-            _networkConnector.Stop();
+            IsSyncing = false;
             _syncBlockChainThread.Abort();
         }
 
-        public void SyncBlockChainReceived(SyncBlockChainRequest packet, Connection connection)
+        private async void connectNodesThread()
         {
-            var lastBlock = _blockChain.LastBlock();
-            connection.Send(new SyncBlockChainResponse(lastBlock == null ? 0 : lastBlock.Height, packet));
-        }
-
-        public void LoadBlockReceived(LoadBlockRequest packet, Connection connection)
-        {
-            var foundBlock = _blockChain.GetBlock(packet.BlockHeight);
-            connection.Send(new LoadBlockResponse(foundBlock, packet));
-        }
-
-        private async void syncBlockChainThread()
-        {
-            while (IsActive)
+            _connections = new List<NodeConnection>();
+            while (true)
             {
-                List<Tuple<Connection, int>> resultRemoteChainStates = new List<Tuple<Connection, int>>();
-                var lastBlock = _blockChain.LastBlock();
-                var actualBlockHeight = lastBlock == null ? 0 : _blockChain.LastBlock().Height;
-                foreach (var connection in Connections.ToList())
-                {
-                   var response = await connection.SendAsync<SyncBlockChainResponse>(new SyncBlockChainRequest());
-                    if(response.LastBlockHeight > actualBlockHeight)
+                if (_connections.Count < 5)
+                    foreach (var node in _nodeList.Nodes.Where(n => !_connections.Select(c => c.NodeAddress).Contains(n.NodeAddress)))
                     {
-                        resultRemoteChainStates.Add(new Tuple<Connection, int>(connection, response.LastBlockHeight));
+                        if (node.LastConnectionAttempt.HasValue)
+                        {
+                            if (node.LastConnectionAttempt.Value < DateTime.Now.AddSeconds(30))
+                            {
+                                var newConnection = new NodeConnection(node.NodeAddress);
+                                if (await newConnection.Health())
+                                {
+                                    _connections.Add(newConnection);
+                                    node.LastConnectionAttempt = null;
+                                }
+                            }
+                        }
+                    }
+
+                var lostConnections = new List<NodeConnection>();
+                foreach (var connection in _connections)
+                {
+                    if (!await connection.Health())
+                    {
+                        lostConnections.Add(connection);
+                    }
+                }
+                lostConnections.ForEach(lc => _connections.Remove(lc));
+
+                await Task.Delay(4000);
+            }
+        }
+
+        private async void syncBlocksThread()
+        {
+            while (IsSyncing)
+            {
+                var lastBlock = _blockChain.LastBlock();
+                var nextBlockHeight = lastBlock == null ? 1 : _blockChain.LastBlock().Height + 1;
+                var resultRemoteChainStates = new List<Tuple<NodeConnection, int>>();
+                foreach (var connection in _connections.ToList())
+                {
+                    var lastBlockHeight = await connection.LastBlockHeight();
+                    if (lastBlockHeight > nextBlockHeight)
+                    {
+                        resultRemoteChainStates.Add(new Tuple<NodeConnection, int>(connection, lastBlockHeight));
                         break;
                     }
                 }
-                if(resultRemoteChainStates.Count > 0)
+                if (resultRemoteChainStates.Count > 0)
                 {
-                    var from = actualBlockHeight;
-                    if (from == 0)
-                        from = 1;
+                    var from = nextBlockHeight;
                     var to = resultRemoteChainStates.Select(t => t.Item2).Max();
-                    if (to > from + 100)
-                        to = from + 100;
+                    if (to > from + 40)
+                        to = from + 40;
                     loadBlocks(resultRemoteChainStates, from, to);
                 }
-                await Task.Delay(10000);
+                else
+                    await Task.Delay(8000);
             }
         }
 
-        private async void loadBlocks(List<Tuple<Connection, int>> resultRemoteChainStates, int from, int to)
+        private void loadBlocks(List<Tuple<NodeConnection, int>> resultRemoteChainStates, int from, int to)
         {
-            List<Task<LoadBlockResponse>> tasks = new List<Task<LoadBlockResponse>>();
+            var tasks = new List<Task<Block>>();
             for (int i = from; i <= to; i++)
             {
-                var connection = resultRemoteChainStates.OrderBy(x => rnd.Next()).FirstOrDefault();
-                if(connection != null)
+                var connection = resultRemoteChainStates.Where(rc => rc.Item2 >= i).OrderBy(x => rnd.Next()).FirstOrDefault();
+                if (connection != null)
                 {
-                    var resul = await connection.Item1.SendAsync<LoadBlockResponse>(new LoadBlockRequest(i));
-                    tasks.Add(connection.Item1.SendAsync<LoadBlockResponse>(new LoadBlockRequest(i)));
+                    tasks.Add(connection.Item1.GetBlock(i));
                 }
             }
             Task.WaitAll(tasks.ToArray());
-            foreach(var taskResult in tasks.Select(t => t.Result))
+            foreach (var taskResult in tasks.Select(t => t.Result))
             {
-                _blockChain.AddBlock(taskResult.Block);
+                if (taskResult != null)
+                    _blockChain.AddBlock(taskResult);
+            }
+        }
+
+        private async void syncTransactionsThread()
+        {
+            while (IsSyncing)
+            {
+                var localMempoolHashes = _blockChain.MemPool.Select(t => t.GenerateHash());
+                var resultRemoteChainStates = new List<Tuple<NodeConnection, List<string>>>();
+                foreach (var connection in _connections.ToList())
+                {
+                    var mempoolHashes = await connection.MempoolHashes();
+
+                    var notExistingTransactions = mempoolHashes.Where(mp => !localMempoolHashes.Any(lmp => lmp == mp)).ToList();
+
+                    if (notExistingTransactions.Count > 0)
+                    {
+                        resultRemoteChainStates.Add(new Tuple<NodeConnection, List<string>>(connection, notExistingTransactions));
+                        break;
+                    }
+                }
+                loadTransactions(resultRemoteChainStates);
+                await Task.Delay(8000);
+            }
+        }
+
+        private void loadTransactions(List<Tuple<NodeConnection, List<string>>> resultRemoteChainStates)
+        {
+            var tasks = new List<Task<List<Transaction>>>();
+            foreach (var connection in resultRemoteChainStates)
+            {
+                tasks.Add(connection.Item1.GetTransactions(connection.Item2));
+            }
+            Task.WaitAll(tasks.ToArray());
+            foreach (var taskResult in tasks.Select(t => t.Result))
+            {
+                if (taskResult != null)
+                {
+                    foreach (var transaction in taskResult)
+                    {
+                        _blockChain.AddTransaction(transaction);
+                    }
+                }
+            }
+        }
+
+        public async void BroadcastBlock(Block block)
+        {
+            if (_connections != null)
+                foreach (var connection in _connections.ToList())
+                {
+                    await connection.PushBlock(block);
+                }
+        }
+
+        public async void BroadcastTransaction(Transaction transaction)
+        {
+            if (_connections != null)
+                foreach (var connection in _connections.ToList())
+            {
+                await connection.PushTransaction(transaction);
             }
         }
     }

@@ -11,16 +11,12 @@ namespace Blockchain.NET.Client
 
         public static BlockChain BlockChain { get; set; }
 
-        public static NetworkSynchronizer NetworkSynchronizer { get; set; }
-
         static void Main(string[] args)
         {
             Wallet = Wallet.Load("test123");
             BlockChain = new BlockChain(Wallet);
-
-            NetworkConnector.IsMainNode = false;
-            NetworkSynchronizer = new NetworkSynchronizer(BlockChain);
-            NetworkSynchronizer.Start();
+            BlockChain.StartSyncronizing();
+            BlockChain.StartMining();
 
             Console.ReadLine();
         }

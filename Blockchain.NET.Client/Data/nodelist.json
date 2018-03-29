@@ -1,8 +1,8 @@
 {
   "Nodes": [
     {
-      "NodeEnpointAddress": "10.18.2.200",
-      "LastConnectionAttempt": "2018-03-28T13:24:15.8222429+02:00"
+      "NodeAddress": "http://localhost:60292/",
+      "LastConnectionAttempt": "2018-03-24T14:01:59.5280017+01:00"
     }
   ]
 }

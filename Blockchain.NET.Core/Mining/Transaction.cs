@@ -19,6 +19,8 @@ namespace Blockchain.NET.Core.Mining
 
         public int BlockHeight { get; set; }
 
+        public string Hash { get; set; }
+
         public virtual ICollection<Input> Inputs { get; set; }
 
         public byte[] Data { get; set; }
@@ -67,9 +69,13 @@ namespace Blockchain.NET.Core.Mining
 
         public string GenerateHash()
         {
-            var inputsHash = Inputs == null ? string.Empty : HashHelper.Sha256(string.Join("", Inputs.Select(i => i.GenerateHash())));
-            var outputsHash = HashHelper.Sha256(string.Join("", Outputs.Select(i => i.GenerateHash())));
-            return HashHelper.Sha256(inputsHash + HashHelper.Sha256(Data) + outputsHash);
+            if (string.IsNullOrEmpty(Hash))
+            {
+                var inputsHash = Inputs == null ? string.Empty : HashHelper.Sha256(string.Join("", Inputs.Select(i => i.GenerateHash())));
+                var outputsHash = Outputs == null ? string.Empty : HashHelper.Sha256(string.Join("", Outputs.Select(i => i.GenerateHash())));
+                Hash = HashHelper.Sha256(inputsHash + HashHelper.Sha256(Data) + outputsHash);
+            }
+            return Hash;
         }
 
         public bool Verify()
@@ -81,6 +87,11 @@ namespace Blockchain.NET.Core.Mining
                         return false;
                 }
             return true;
+        }
+
+        public string ToJson()
+        {
+            return JsonConvert.SerializeObject(this, new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore });
         }
     }
 }

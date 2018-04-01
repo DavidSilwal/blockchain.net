@@ -38,9 +38,21 @@ namespace Blockchain.NET.Node.V1.Node.Controllers
         }
 
         [HttpGet("[action]")]
+        public JsonResult BlockHashes()
+        {
+            return Json(Program.BlockChain.BlockHashes());
+        }
+
+        [HttpGet("[action]/{blockHeight}")]
+        public JsonResult GetBlockchainHash(int blockHeight)
+        {
+            return Json(Program.BlockChain.BlockchainHash(blockHeight));
+        }
+
+        [HttpGet("[action]")]
         public JsonResult GetTransactions([FromBody]List<string> hashes)
         {
-            return Json(Program.BlockChain.MemPool.Where(mp => hashes.Contains(mp.GenerateHash())).ToList());
+            return Json(Program.BlockChain.MemPool.Where(mp => hashes.Contains(mp.GenerateHash())).ToList(), new JsonSerializerSettings() { ReferenceLoopHandling = ReferenceLoopHandling.Ignore });
         }
 
         [HttpGet("[action]/{blockHeight}")]
@@ -64,7 +76,7 @@ namespace Blockchain.NET.Node.V1.Node.Controllers
         }
 
         [HttpPost("[action]")]
-        public IActionResult PushTransaction(Transaction transaction)
+        public IActionResult PushTransaction([FromBody] Transaction transaction)
         {
             try
             {

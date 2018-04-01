@@ -28,6 +28,8 @@ namespace Blockchain.NET.Node
             BlockChain = new BlockChain(Wallet);
             BlockChain.StartSyncronizing();
 
+            BlockChain.StartMining();
+
             //NetworkConnector.IsMainNode = true;
 
             //RSAHelper.test();

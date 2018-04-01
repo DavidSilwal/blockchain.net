@@ -8,7 +8,8 @@ namespace Blockchain.NET.Core.Helpers
     {
         Elapsed = ConsoleColor.White,
         MINEDBLOCK = ConsoleColor.Green,
-        WriteLive = ConsoleColor.Yellow
+        WriteLive = ConsoleColor.Yellow,
+        MININGFAILED = ConsoleColor.Red
     }
 
     public static class BlockchainConsole

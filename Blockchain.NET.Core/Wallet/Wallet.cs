@@ -122,17 +122,17 @@ namespace Blockchain.NET.Core.Wallet
 
                 foreach (var transaction in transactions)
                 {
+                    var isIncome = transaction.Inputs == null ? true : transaction.Inputs.Select(i => i.Key).All(o => !walletAddresses.Contains(o));
                     transactionViews.Add(new TransactionView()
                     {
                         Inputs = transaction.Inputs.Select(i => new IOView() { Key = i.Key, Amount = BalanceHelper.GetBalanceOfAddress(i.Key) }).ToArray(),
                         Message = transaction.Data == null ? string.Empty : Encoding.Unicode.GetString(transaction.Data),
                         BlockHeight = transaction.BlockHeight,
                         Outputs = transaction.Outputs.Select(o => new IOView() { Key = o.Key, Amount = o.Amount }).ToArray(),
-                        Amount = transaction.Inputs == null || transaction.Inputs.Count == 0 ? transaction.Outputs.Select(o => o.Amount).Sum() : - transaction.Outputs.Where(o => !walletAddresses.Contains(o.Key)).Select(o => o.Amount).Sum(),
-                        IsIncome = transaction.Outputs.Select(i => i.Key).All(o => walletAddresses.Contains(o))
+                        Amount = transaction.Inputs == null || transaction.Inputs.Count == 0 ? transaction.Outputs.Select(o => o.Amount).Sum() : isIncome ? transaction.Outputs.Select(o => o.Amount).Sum() : -transaction.Outputs.Where(o => !walletAddresses.Contains(o.Key)).Select(o => o.Amount).Sum(),
+                        IsIncome = isIncome
                     });
                 }
-
             }
             return transactionViews.OrderBy(t => t.BlockHeight).ToList();
         }

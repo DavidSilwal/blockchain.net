@@ -1,5 +1,6 @@
 ﻿using Blockchain.NET.Blockchain.Network.Settings;
 using Blockchain.NET.Core.Mining;
+using Blockchain.NET.Core.Store;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,9 +15,10 @@ namespace Blockchain.NET.Blockchain.Network
     {
         private readonly BlockChain _blockChain;
 
-        private Thread _syncBlockChainThread;
+        private Thread _syncBlocksThread;
         private Thread _connectNodesThread;
         private Thread _transactionsThread;
+        private Thread _syncBlockchainsThread;
 
         public bool IsSyncing { get; set; }
         private static Random rnd = new Random();
@@ -35,26 +37,32 @@ namespace Blockchain.NET.Blockchain.Network
             if (!IsSyncing)
             {
                 IsSyncing = true;
-                if (_syncBlockChainThread == null || _syncBlockChainThread.ThreadState != ThreadState.Running)
+                if (_syncBlocksThread == null || _syncBlocksThread.ThreadState != ThreadState.Running)
                 {
-                    _syncBlockChainThread = new Thread(syncBlocksThread);
+                    _syncBlocksThread = new Thread(syncBlocksThread);
                     _connectNodesThread = new Thread(connectNodesThread);
                     _transactionsThread = new Thread(syncTransactionsThread);
+                    _syncBlockchainsThread = new Thread(syncBlockchainsThread);
                 }
-                _syncBlockChainThread.Start();
+                _connections = new List<NodeConnection>();
+                _syncBlocksThread.Start();
                 _connectNodesThread.Start();
+                _transactionsThread.Start();
+                _syncBlockchainsThread.Start();
             }
         }
 
         public void Stop()
         {
             IsSyncing = false;
-            _syncBlockChainThread.Abort();
+            _syncBlocksThread.Abort();
+            _connectNodesThread.Abort();
+            _transactionsThread.Abort();
+            _syncBlockchainsThread.Abort();
         }
 
         private async void connectNodesThread()
         {
-            _connections = new List<NodeConnection>();
             while (true)
             {
                 if (_connections.Count < 5)
@@ -84,7 +92,12 @@ namespace Blockchain.NET.Blockchain.Network
                 }
                 lostConnections.ForEach(lc => _connections.Remove(lc));
 
-                await Task.Delay(4000);
+                for (int i = 0; i < 4; i++)
+                {
+                    await Task.Delay(1000);
+                    if (!IsSyncing)
+                        break;
+                }
             }
         }
 
@@ -111,7 +124,12 @@ namespace Blockchain.NET.Blockchain.Network
                     loadBlocks(resultRemoteChainStates, from, to);
                 }
                 else
-                    await Task.Delay(8000);
+                    for (int i = 0; i < 8; i++)
+                    {
+                        await Task.Delay(1000);
+                        if (!IsSyncing)
+                            break;
+                    }
             }
         }
 
@@ -137,7 +155,7 @@ namespace Blockchain.NET.Blockchain.Network
                 if (taskResult != null)
                 {
                     foreach (var block in taskResult)
-                        _blockChain.AddBlock(block);
+                        _blockChain.AddBlock(block, false);
                 }
             }
         }
@@ -152,16 +170,24 @@ namespace Blockchain.NET.Blockchain.Network
                 {
                     var mempoolHashes = await connection.MempoolHashes();
 
-                    var notExistingTransactions = mempoolHashes.Where(mp => !localMempoolHashes.Any(lmp => lmp == mp)).ToList();
-
-                    if (notExistingTransactions.Count > 0)
+                    if (mempoolHashes != null)
                     {
-                        resultRemoteChainStates.Add(new Tuple<NodeConnection, List<string>>(connection, notExistingTransactions));
-                        break;
+                        var notExistingTransactions = mempoolHashes.Where(mp => !localMempoolHashes.Any(lmp => lmp == mp)).ToList();
+
+                        if (notExistingTransactions.Count > 0)
+                        {
+                            resultRemoteChainStates.Add(new Tuple<NodeConnection, List<string>>(connection, notExistingTransactions));
+                            break;
+                        }
                     }
                 }
                 loadTransactions(resultRemoteChainStates);
-                await Task.Delay(8000);
+                for (int i = 0; i < 8; i++)
+                {
+                    await Task.Delay(1000);
+                    if (!IsSyncing)
+                        break;
+                }
             }
         }
 
@@ -180,6 +206,100 @@ namespace Blockchain.NET.Blockchain.Network
                     foreach (var transaction in taskResult)
                     {
                         _blockChain.AddTransaction(transaction);
+                    }
+                }
+            }
+        }
+
+        private async void syncBlockchainsThread()
+        {
+            while (IsSyncing)
+            {
+                var lastBlock = _blockChain.LastBlock();
+                if (lastBlock != null)
+                {
+                    var localBlockchainHash = _blockChain.BlockchainHash(lastBlock.Height);
+                    var notSynnchronChains = new List<NodeConnection>();
+                    foreach (var connection in _connections.ToList())
+                    {
+                        var blockchainHash = await connection.BlockchainHash(lastBlock.Height);
+                        if (blockchainHash != localBlockchainHash)
+                        {
+                            notSynnchronChains.Add(connection);
+                            break;
+                        }
+                    }
+                    if (notSynnchronChains.Count > 0)
+                    {
+                        syncBlockchains(notSynnchronChains, lastBlock);
+                    }
+                }
+                for (int i = 0; i < 60; i++)
+                {
+                    await Task.Delay(1000);
+                    if (!IsSyncing)
+                        break;
+                }
+            }
+        }
+
+        private async void syncBlockchains(List<NodeConnection> notSyncNodeConnections, Block lastBlock)
+        {
+            var tasks = new List<Task<List<Transaction>>>();
+            foreach (var connection in notSyncNodeConnections)
+            {
+                var lastBlockHeight = await connection.LastBlockHeight();
+                if (lastBlockHeight > lastBlock.Height)
+                {
+                    var conBlockHashes = await connection.BlockHashes();
+                    if (conBlockHashes != null)
+                    {
+                        var localBlockHashes = _blockChain.BlockHashes();
+                        var smallerListEnd = conBlockHashes.Count < localBlockHashes.Count ? conBlockHashes.Count : localBlockHashes.Count;
+                        var indexNotSame = 0;
+                        for (int i = 0; i < smallerListEnd; i++)
+                        {
+                            if (conBlockHashes[i] != localBlockHashes[i])
+                            {
+                                indexNotSame = i + 1;
+                                break;
+                            }
+                        }
+                        if (indexNotSame > 0)
+                        {
+                            try
+                            {
+                                if (conBlockHashes.Count - indexNotSame < 50)
+                                {
+                                    var alternateBlockChain = await connection.GetBlocks(Enumerable.Range(indexNotSame, conBlockHashes.Count + 1).ToList());
+                                    using (BlockchainDbContext db = new BlockchainDbContext())
+                                    {
+
+                                        var blocksToDelete = db.Blocks.Where(b => b.Height >= indexNotSame).ToList();
+                                        blocksToDelete.ForEach(b => db.Blocks.Remove(b));
+                                        db.SaveChanges();
+                                        alternateBlockChain.ForEach(b => db.Blocks.Add(b));
+                                        db.SaveChanges();
+                                    }
+                                }
+                                else
+                                {
+                                    if (_blockChain.NextBlock != null)
+                                        _blockChain.NextBlock.StopMining();
+                                    using (BlockchainDbContext db = new BlockchainDbContext())
+                                    {
+
+                                        var blocksToDelete = db.Blocks.ToList();
+                                        blocksToDelete.ForEach(b => db.Blocks.Remove(b));
+                                        db.SaveChanges();
+                                    }
+                                }
+                            }
+                            catch(Exception exc)
+                            {
+
+                            }
+                        }
                     }
                 }
             }

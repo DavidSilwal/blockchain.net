@@ -2,6 +2,7 @@
 using Blockchain.NET.Core;
 using Blockchain.NET.Core.Helpers;
 using Blockchain.NET.Core.Helpers.Calculations;
+using Blockchain.NET.Core.Helpers.Cryptography;
 using Blockchain.NET.Core.Mining;
 using Blockchain.NET.Core.Store;
 using Blockchain.NET.Core.Wallet;
@@ -19,7 +20,6 @@ namespace Blockchain.NET.Blockchain
 {
     public class BlockChain
     {
-        public decimal MiningReward { get; set; } = 1000;
         public int DifficultyCorrectureInterval { get; private set; } = 10;
         public int DifficultyTimeTarget { get; private set; } = 20;
         public int NextBlockHeight
@@ -31,6 +31,14 @@ namespace Blockchain.NET.Blockchain
                     _nextBlock = LastBlock();
                 }
                 return _nextBlock == null ? 1 : _nextBlock.Height;
+            }
+        }
+
+        public Block NextBlock
+        {
+            get
+            {
+                return _nextBlock;
             }
         }
 
@@ -47,6 +55,8 @@ namespace Blockchain.NET.Blockchain
         }
 
         public Wallet Wallet { get; set; }
+
+        public decimal MiningReward { get; set; } = 1000;
 
         private bool _isMining;
         private List<Transaction> _memPool;
@@ -86,18 +96,19 @@ namespace Blockchain.NET.Blockchain
                 lock (_memPool)
                 {
                     var miningAddress = Wallet.NewAddress();
-                    AddTransaction(new Transaction(null, Wallet, new[] { new Output(miningAddress.Key, MiningReward) }.ToList()));
                     using (BlockchainDbContext db = new BlockchainDbContext())
                     {
                         var mempoolHashes = _memPool.Select(m => m.GenerateHash());
                         var existingTransactionsInBlockchain = db.Transactions.Where(t => mempoolHashes.Contains(t.Hash)).ToList();
                         existingTransactionsInBlockchain.ForEach(t => _memPool.Remove(_memPool.First(m => m.Hash == t.Hash)));
-                        _nextBlock = lastBlock == null ? new Block(1, null, _memPool.ToList()) : new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), _memPool.ToList());
+                        var transactionsInBlock = _memPool.ToList();
+                        transactionsInBlock.Insert(0, new Transaction(null, Wallet, new[] { new Output(miningAddress.Key, MiningReward) }.ToList()));
+                        _nextBlock = lastBlock == null ? new Block(1, null, transactionsInBlock) : new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), transactionsInBlock);
                     }
-
                 }
                 var difficulty = lastBlock == null ? 5 : lastBlock.Difficulty;
-                //TODO: Reactivate audo difficulty calculation
+                difficulty = 5;
+                //TODO: Reactivate auto difficulty calculation
                 //if (lastBlock != null && lastBlock.Height > 1 && lastBlock.Height % DifficultyCorrectureInterval == 1)
                 //{
                 //    var lowTime = GetBlock(lastBlock.Height - DifficultyCorrectureInterval).TimeStamp;
@@ -106,8 +117,10 @@ namespace Blockchain.NET.Blockchain
                 //    difficulty = Convert.ToInt32(lastBlock.Difficulty * DifficultyTimeTarget / ((highTime - lowTime).TotalSeconds / DifficultyCorrectureInterval));
                 //}
                 _nextBlock.MineBlock(difficulty);
-                AddBlock(_nextBlock);
-                BlockchainConsole.WriteLine($"MINED BLOCK: {_nextBlock}", ConsoleEventType.MINEDBLOCK);
+                if (AddBlock(_nextBlock))
+                    BlockchainConsole.WriteLine($"MINED BLOCK: {_nextBlock}", ConsoleEventType.MINEDBLOCK);
+                else
+                    BlockchainConsole.WriteLine($"MINING FAILED: {_nextBlock}", ConsoleEventType.MININGFAILED);
             }
         }
 
@@ -143,7 +156,7 @@ namespace Blockchain.NET.Blockchain
             return false;
         }
 
-        public bool AddBlock(Block block)
+        public bool AddBlock(Block block, bool broadcastBlock = true)
         {
             if (block == null)
                 return false;
@@ -177,17 +190,25 @@ namespace Blockchain.NET.Blockchain
                                     var findLastBlock = block.Height == 1 ? null : db.Blocks.FirstOrDefault(b => b.Height == block.Height - 1);
                                     if (block.Height == 1 || (findLastBlock != null && findLastBlock.GenerateHash() == block.PreviousHash))
                                     {
-                                        db.Blocks.Add(block);
-                                        db.SaveChanges();
-                                        foreach (var transactionToDelete in block.Transactions)
+                                        try
                                         {
-                                            var foundTransaction = _memPool.FirstOrDefault(t => t.GenerateHash() == transactionToDelete.GenerateHash());
-                                            if (foundTransaction != null)
-                                                _memPool.Remove(foundTransaction);
+                                            db.Blocks.Add(block);
+                                            db.SaveChanges();
+                                            foreach (var transactionToDelete in block.Transactions)
+                                            {
+                                                var foundTransaction = _memPool.FirstOrDefault(t => t.GenerateHash() == transactionToDelete.GenerateHash());
+                                                if (foundTransaction != null)
+                                                    _memPool.Remove(foundTransaction);
+                                            }
+                                            block.StopMining();
+                                            if (broadcastBlock)
+                                                _networkSynchronizer.BroadcastBlock(block);
+                                            return true;
                                         }
-                                        block.StopMining();
-                                        _networkSynchronizer.BroadcastBlock(block);
-                                        return true;
+                                        catch(Exception exc)
+                                        {
+
+                                        }
                                     }
                                 }
                             }
@@ -308,6 +329,24 @@ namespace Blockchain.NET.Blockchain
             var lastBlock = LastBlock();
 
             return IsBlockValid(lastBlock) == null ? true : false;
+        }
+
+        public string BlockchainHash(int blockHeight)
+        {
+            using (BlockchainDbContext db = new BlockchainDbContext())
+            {
+                var blockHashes = db.Blocks.Where(b => b.Height <= blockHeight).Select(b => b.PreviousHash).ToList();
+                return HashHelper.Sha256(string.Join("", blockHashes));
+            }
+        }
+
+        public List<string> BlockHashes()
+        {
+            using (BlockchainDbContext db = new BlockchainDbContext())
+            {
+                var blockHashes = db.Blocks.Select(b => b.PreviousHash).ToList();
+                return blockHashes;
+            }
         }
 
         #endregion

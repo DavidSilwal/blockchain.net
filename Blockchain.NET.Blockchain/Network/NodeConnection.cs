@@ -76,11 +76,47 @@ namespace Blockchain.NET.Blockchain.Network
             }
         }
 
+        public async Task<string> BlockchainHash(int blockHeight)
+        {
+            try
+            {
+                string apiRoute = BaseApiRoute + $"/getblockchainhash/{blockHeight}";
+                using (HttpClient client = new HttpClient())
+                using (HttpResponseMessage response = await client.GetAsync(apiRoute))
+                using (HttpContent content = response.Content)
+                {
+                    return await content.ReadAsStringAsync();
+                }
+            }
+            catch (Exception exc)
+            {
+                return string.Empty;
+            }
+        }
+
         public async Task<List<string>> MempoolHashes()
         {
             try
             {
                 string apiRoute = BaseApiRoute + "/mempoolhashes";
+                using (HttpClient client = new HttpClient())
+                using (HttpResponseMessage response = await client.GetAsync(apiRoute))
+                using (HttpContent content = response.Content)
+                {
+                    return JsonConvert.DeserializeObject<List<string>>(await content.ReadAsStringAsync());
+                }
+            }
+            catch (Exception exc)
+            {
+                return null;
+            }
+        }
+
+        public async Task<List<string>> BlockHashes()
+        {
+            try
+            {
+                string apiRoute = BaseApiRoute + "/blockhashes";
                 using (HttpClient client = new HttpClient())
                 using (HttpResponseMessage response = await client.GetAsync(apiRoute))
                 using (HttpContent content = response.Content)

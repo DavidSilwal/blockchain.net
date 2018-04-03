@@ -17,6 +17,8 @@ namespace Blockchain.NET.Core.Mining
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public long Id { get; set; }
 
+        public long TransactionFee { get; set; }
+
         public int BlockHeight { get; set; }
 
         public string Hash { get; set; }
@@ -32,11 +34,12 @@ namespace Blockchain.NET.Core.Mining
 
         public Transaction() { }
 
-        public Transaction(List<Input> inputs, Wallet.Wallet wallet, List<Output> outputs, byte[] data = null)
+        public Transaction(List<Input> inputs, Wallet.Wallet wallet, List<Output> outputs, long transactionFee = 0, byte[] data = null)
         {
             Inputs = inputs;
             Data = data;
             Outputs = outputs;
+            TransactionFee = transactionFee;
             calculateOutputs(wallet);
             signInputs(wallet);
         }
@@ -62,18 +65,19 @@ namespace Blockchain.NET.Core.Mining
         {
             if (Inputs != null)
             {
-                decimal balance = BalanceHelper.GetBalanceOfAddresses(Inputs.Select(i => i.Key).ToArray());
-                Outputs.Add(new Output(wallet.NewAddress().Key, balance - Outputs.Select(o => o.Amount).Sum()));
+                long balance = BalanceHelper.GetBalanceOfAddresses(Inputs.Select(i => i.Key).ToArray());
+                Outputs.Add(new Output(wallet.NewAddress().Key, balance - TransactionFee - Outputs.Select(o => o.Amount).Sum()));
             }
         }
 
-        public string GenerateHash()
+        public string GenerateHash(bool force = false)
         {
-            if (string.IsNullOrEmpty(Hash))
+            if (string.IsNullOrEmpty(Hash) || force)
             {
                 var inputsHash = Inputs == null ? string.Empty : HashHelper.Sha256(string.Join("", Inputs.Select(i => i.GenerateHash())));
                 var outputsHash = Outputs == null ? string.Empty : HashHelper.Sha256(string.Join("", Outputs.Select(i => i.GenerateHash())));
-                Hash = HashHelper.Sha256(inputsHash + HashHelper.Sha256(Data) + outputsHash);
+                TransactionFee = 0;
+                Hash = HashHelper.Sha256(inputsHash + HashHelper.Sha256(Data) + outputsHash + TransactionFee);
             }
             return Hash;
         }

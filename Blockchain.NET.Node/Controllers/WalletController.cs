@@ -60,7 +60,7 @@ namespace Blockchain.NET.Node.Controllers
     {
         public string Address { get; set; }
 
-        public decimal Amount { get; set; }
+        public long Amount { get; set; }
 
         public string Message { get; set; }
     }

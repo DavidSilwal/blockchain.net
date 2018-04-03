@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
@@ -20,8 +21,8 @@ namespace Blockchain.NET.Blockchain
 {
     public class BlockChain
     {
-        public int DifficultyCorrectureInterval { get; private set; } = 10;
-        public int DifficultyTimeTarget { get; private set; } = 20;
+        public int DifficultyCorrectureInterval { get; private set; } = 512;
+        public int DifficultyTimeTarget { get; private set; } = 15;
         public int NextBlockHeight
         {
             get
@@ -56,7 +57,7 @@ namespace Blockchain.NET.Blockchain
 
         public Wallet Wallet { get; set; }
 
-        public decimal MiningReward { get; set; } = 1000;
+        public long MiningReward { get; set; } = 1000;
 
         private bool _isMining;
         private List<Transaction> _memPool;
@@ -101,26 +102,46 @@ namespace Blockchain.NET.Blockchain
                         var mempoolHashes = _memPool.Select(m => m.GenerateHash());
                         var existingTransactionsInBlockchain = db.Transactions.Where(t => mempoolHashes.Contains(t.Hash)).ToList();
                         existingTransactionsInBlockchain.ForEach(t => _memPool.Remove(_memPool.First(m => m.Hash == t.Hash)));
-                        var transactionsInBlock = _memPool.ToList();
+                        var transactionsInBlock = _memPool.OrderByDescending(t => t.TransactionFee).Take(100).ToList();
                         transactionsInBlock.Insert(0, new Transaction(null, Wallet, new[] { new Output(miningAddress.Key, MiningReward) }.ToList()));
-                        _nextBlock = lastBlock == null ? new Block(1, null, transactionsInBlock) : new Block(lastBlock.Height + 1, lastBlock.GenerateHash(), transactionsInBlock);
+                        _nextBlock = lastBlock == null ? new Block(1, null, transactionsInBlock) : new Block(lastBlock.Height + 1, HashHelper.ByteArrayToHexString(lastBlock.GenerateHash()), transactionsInBlock);
                     }
                 }
-                var difficulty = lastBlock == null ? 5 : lastBlock.Difficulty;
-                difficulty = 5;
-                //TODO: Reactivate auto difficulty calculation
-                //if (lastBlock != null && lastBlock.Height > 1 && lastBlock.Height % DifficultyCorrectureInterval == 1)
-                //{
-                //    var lowTime = GetBlock(lastBlock.Height - DifficultyCorrectureInterval).TimeStamp;
-                //    var highTime = GetBlock(lastBlock.Height).TimeStamp;
-
-                //    difficulty = Convert.ToInt32(lastBlock.Difficulty * DifficultyTimeTarget / ((highTime - lowTime).TotalSeconds / DifficultyCorrectureInterval));
-                //}
-                _nextBlock.MineBlock(difficulty);
+                _nextBlock.MineBlock(CalculateDifficulty(_nextBlock));
                 if (AddBlock(_nextBlock))
                     BlockchainConsole.WriteLine($"MINED BLOCK: {_nextBlock}", ConsoleEventType.MINEDBLOCK);
                 else
                     BlockchainConsole.WriteLine($"MINING FAILED: {_nextBlock}", ConsoleEventType.MININGFAILED);
+            }
+        }
+
+        private double CalculateDifficulty(Block block = null)
+        {
+            if (block == null)
+                block = LastBlock();
+            if (block == null || block.Height == 1)
+                return 170;
+            else
+            {
+                if (block != null && block.Height > 1 && block.Height % DifficultyCorrectureInterval == 1)
+                {
+                    var lowTime = GetBlock(block.Height - DifficultyCorrectureInterval).TimeStamp;
+                    var lastBlock = GetBlock(block.Height - 1);
+                    if (lastBlock != null)
+                    {
+                        var highTime = lastBlock.TimeStamp;
+
+                        var valueToCorrect = ((highTime - lowTime).TotalSeconds / DifficultyCorrectureInterval) / DifficultyTimeTarget;
+
+                        if (valueToCorrect > 1.02)
+                            valueToCorrect = 1.02;
+                        if (valueToCorrect < 0.98)
+                            valueToCorrect = 0.98;
+
+                        return lastBlock.Difficulty * valueToCorrect;
+                    }
+                }
+                return GetBlock(block.Height - 1).Difficulty;
             }
         }
 
@@ -161,53 +182,67 @@ namespace Blockchain.NET.Blockchain
             if (block == null)
                 return false;
             //Check if Proof of Work is correct
-            if (block.GenerateHash().Substring(0, block.Difficulty).All(c => c == '0'))
+            if (block.Difficulty > BigInteger.Log(new BigInteger(block.GenerateHash().Concat(new byte[] { 0, 0 }).ToArray())))
             {
-                //Check if MerkleTree from transactions is correct
-                if (block.MerkleTreeHash == block.CreateMerkleTreeHash())
+                //Check if difficulty correct
+                if (block.Difficulty == CalculateDifficulty(block))
                 {
-                    //Check if only one Coinbase transaction
-                    if (block.Transactions.Count(t => t.Inputs == null || (t.Inputs != null && t.Inputs.Count == 0)) == 1)
+                    //Check if MerkleTree from transactions is correct
+                    if (block.MerkleTreeHash == block.CreateMerkleTreeHash())
                     {
-                        //Check signatures and validity of transactions
-                        bool transactionsValid = true;
-                        if (block.Transactions != null)
-                            foreach (var transaction in block.Transactions)
-                            {
-                                if (!transaction.Verify())
-                                {
-                                    transactionsValid = false;
-                                    break;
-                                }
-                            }
-                        if (transactionsValid)
+                        //Check if only one Coinbase transaction
+                        if (block.Transactions.Count(t => t.Inputs == null || (t.Inputs != null && t.Inputs.Count == 0)) == 1)
                         {
-                            using (BlockchainDbContext db = new BlockchainDbContext())
+                            //Check if first transaction is coinbase and the output of the transaction is mining reward and transaction fee not more not les
+                            if (block.Transactions.Count > 0 && block.Transactions.First().Outputs.Count == 1 && block.Transactions.First().Outputs.First().Amount == (block.Transactions.Select(t => t.TransactionFee).Sum() + MiningReward))
                             {
-                                var existingBlock = db.Blocks.FirstOrDefault(b => b.Height == block.Height);
-                                if (existingBlock == null)
+                                //Check signatures and validity of transactions
+                                bool transactionsValid = true;
+                                if (block.Transactions != null)
                                 {
-                                    var findLastBlock = block.Height == 1 ? null : db.Blocks.FirstOrDefault(b => b.Height == block.Height - 1);
-                                    if (block.Height == 1 || (findLastBlock != null && findLastBlock.GenerateHash() == block.PreviousHash))
+                                    var inputAddresses = new List<string>();
+                                    foreach (var actTransaction in block.Transactions)
                                     {
-                                        try
+                                        if (actTransaction.Inputs != null)
+                                            inputAddresses.AddRange(actTransaction.Inputs.Select(i => i.Key));
+                                    }
+                                    foreach (var transaction in block.Transactions)
+                                    {
+                                        if (!transaction.Verify())
                                         {
-                                            db.Blocks.Add(block);
-                                            db.SaveChanges();
-                                            foreach (var transactionToDelete in block.Transactions)
-                                            {
-                                                var foundTransaction = _memPool.FirstOrDefault(t => t.GenerateHash() == transactionToDelete.GenerateHash());
-                                                if (foundTransaction != null)
-                                                    _memPool.Remove(foundTransaction);
-                                            }
-                                            block.StopMining();
-                                            if (broadcastBlock)
-                                                _networkSynchronizer.BroadcastBlock(block);
-                                            return true;
+                                            transactionsValid = false;
+                                            break;
                                         }
-                                        catch(Exception exc)
+                                        else if (inputAddresses.Any(i => transaction.Inputs.Select(ip => ip.Key).Contains(i)))
                                         {
-
+                                            transactionsValid = false;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (transactionsValid)
+                                {
+                                    using (BlockchainDbContext db = new BlockchainDbContext())
+                                    {
+                                        var existingBlock = db.Blocks.FirstOrDefault(b => b.Height == block.Height);
+                                        if (existingBlock == null)
+                                        {
+                                            var findLastBlock = block.Height == 1 ? null : db.Blocks.FirstOrDefault(b => b.Height == block.Height - 1);
+                                            if (block.Height == 1 || (findLastBlock != null && HashHelper.ByteArrayToHexString(findLastBlock.GenerateHash()) == block.PreviousHash))
+                                            {
+                                                db.Blocks.Add(block);
+                                                db.SaveChanges();
+                                                foreach (var transactionToDelete in block.Transactions)
+                                                {
+                                                    var foundTransaction = _memPool.FirstOrDefault(t => t.GenerateHash() == transactionToDelete.GenerateHash());
+                                                    if (foundTransaction != null)
+                                                        _memPool.Remove(foundTransaction);
+                                                }
+                                                block.StopMining();
+                                                if (broadcastBlock)
+                                                    _networkSynchronizer.BroadcastBlock(block);
+                                                return true;
+                                            }
                                         }
                                     }
                                 }
@@ -235,7 +270,7 @@ namespace Blockchain.NET.Blockchain
                     {
                         decimal balance = BalanceHelper.GetBalanceOfAddresses(transaction.Inputs.Select(i => i.Key).ToArray());
                         // Check if enough balance on inputs
-                        if (balance >= transaction.Outputs.Select(o => o.Amount).Sum())
+                        if (balance >= (transaction.Outputs.Select(o => o.Amount).Sum() + transaction.TransactionFee))
                         {
                             bool everUsedAsInput = BalanceHelper.EverUsedAsInput(transaction.Inputs.Select(i => i.Key).ToArray());
                             // Check if ever used as input before
@@ -282,16 +317,17 @@ namespace Blockchain.NET.Blockchain
                 return block;
             using (BlockchainDbContext db = new BlockchainDbContext())
             {
-                var chainUnderBlock = db.Blocks.Where(b => b.Height < block.Height).OrderByDescending(b => b.Height).ToList();
+                var chainUnderBlock = db.Blocks.Include("Transactions.Outputs").Include("Transactions.Inputs").Where(b => b.Height < block.Height).OrderByDescending(b => b.Height).ToList();
 
                 if (chainUnderBlock.Count() > 0)
                 {
                     var baseHash = block.PreviousHash;
                     foreach (var actBlock in chainUnderBlock)
                     {
-                        var hashFromFile = actBlock.GenerateHash();
+                        actBlock.MerkleTreeHash = actBlock.CreateMerkleTreeHash();
+                        var hashFromBlock = HashHelper.ByteArrayToHexString(actBlock.GenerateHash());
 
-                        if (hashFromFile != baseHash)
+                        if (hashFromBlock != baseHash)
                             return actBlock;
                         baseHash = actBlock.PreviousHash;
                     }

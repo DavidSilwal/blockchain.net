@@ -9,9 +9,9 @@ namespace Blockchain.NET.Core.Helpers.Calculations
 {
     public static class BalanceHelper
     {
-        public static decimal GetBalanceOfAddress(string address)
+        public static long GetBalanceOfAddress(string address)
         {
-            decimal balance = 0;
+            long balance = 0;
             if (!string.IsNullOrEmpty(address))
                 using (BlockchainDbContext db = new BlockchainDbContext())
                 {
@@ -20,9 +20,9 @@ namespace Blockchain.NET.Core.Helpers.Calculations
             return balance;
         }
 
-        public static decimal GetBalanceOfAddresses(string[] addresses)
+        public static long GetBalanceOfAddresses(string[] addresses)
         {
-            decimal balance = 0;
+            long balance = 0;
             if (addresses != null)
                 using (BlockchainDbContext db = new BlockchainDbContext())
                 {

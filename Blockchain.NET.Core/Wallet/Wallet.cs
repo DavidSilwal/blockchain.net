@@ -70,7 +70,7 @@ namespace Blockchain.NET.Core.Wallet
             return newAddress;
         }
 
-        public Transaction CreateTransaction(string address, decimal amount, string message)
+        public Transaction CreateTransaction(string address, long amount, string message)
         {
             var balancesPerOutput = GetBalancesPerOutput();
             var aggregatedOutputs = new List<Output>();
@@ -81,7 +81,7 @@ namespace Blockchain.NET.Core.Wallet
                     break;
             }
 
-            var newTransaction = new Transaction(aggregatedOutputs.Select(o => new Input(o.Key)).ToList(), this, new[] { new Output(address, amount) }.ToList(), Encoding.Unicode.GetBytes(message));
+            var newTransaction = new Transaction(aggregatedOutputs.Select(o => new Input(o.Key)).ToList(), this, new[] { new Output(address, amount) }.ToList(), data: Encoding.Unicode.GetBytes(message));
 
             return newTransaction;
         }

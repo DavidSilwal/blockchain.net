@@ -24,6 +24,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="Data\blockchain.db-journal" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Blockchain.NET.Blockchain\Blockchain.NET.Blockchain.csproj" />
     <ProjectReference Include="..\Blockchain.NET.Core\Blockchain.NET.Core.csproj" />
   </ItemGroup>

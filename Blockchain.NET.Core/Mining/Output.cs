@@ -17,13 +17,13 @@ namespace Blockchain.NET.Core.Mining
 
         public string Key { get; set; }
 
-        public decimal Amount { get; set; }
+        public long Amount { get; set; }
 
         public Transaction Transaction { get; set; }
 
         public Output() { }
 
-        public Output(string key, decimal amount)
+        public Output(string key, long amount)
         {
             Key = key;
             Amount = amount;

@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -22,7 +23,7 @@ namespace Blockchain.NET.Core.Mining
 
         public long Nonce { get; set; }
 
-        public int Difficulty { get; set; }
+        public double Difficulty { get; set; }
 
         public string MerkleTreeHash { get; set; }
 
@@ -39,6 +40,12 @@ namespace Blockchain.NET.Core.Mining
             PreviousHash = previousHash;
             Transactions = transactions;
             MerkleTreeHash = CreateMerkleTreeHash();
+            var genesisTransaction = Transactions.FirstOrDefault(t => t.Inputs == null);
+            if(genesisTransaction != null)
+            {
+                if (genesisTransaction.Outputs.Count > 0)
+                    genesisTransaction.Outputs.First().Amount += transactions.Where(t => t.Inputs != null).Select(t => t.TransactionFee).Sum();
+            }
         }
 
         public string CreateMerkleTreeHash()
@@ -46,7 +53,7 @@ namespace Blockchain.NET.Core.Mining
             if (Transactions != null)
                 if (Transactions.Count > 0)
                 {
-                    var merkleTreeList = Transactions.Select(t => t.GenerateHash()).ToList();
+                    var merkleTreeList = Transactions.Select(t => t.GenerateHash(true)).ToList();
                     while (merkleTreeList.Count > 1)
                     {
                         merkleTreeList.Add(HashHelper.Sha256(merkleTreeList[0] + merkleTreeList[1]));
@@ -57,7 +64,7 @@ namespace Blockchain.NET.Core.Mining
             return string.Empty;
         }
 
-        public void MineBlock(int difficulty)
+        public void MineBlock(double difficulty)
         {
             if (!_isMining)
             {
@@ -73,18 +80,18 @@ namespace Blockchain.NET.Core.Mining
                 //#else
                 //                Task[] miningTasks = new Task[Environment.ProcessorCount];
                 //#endif
-                var difficultyValue = string.Join("0", new string[difficulty + 1]);
+                var unsigned = new byte[] { 0, 0 };
                 for (int i = 0; i < miningTasks.Length; i++)
                 {
                     var startNonce = i;
                     miningTasks[i] = Task.Factory.StartNew(() =>
                     {
                         var taskHash = GenerateHash(startNonce);
-                        while (taskHash.Substring(0, difficulty) != difficultyValue)
+                        while (difficulty < BigInteger.Log(new BigInteger(taskHash.Concat(unsigned).ToArray())))
                         {
                             if (!_isMining)
                             {
-                                taskHash = string.Empty;
+                                taskHash = null;
                                 break;
                             }
                             startNonce = startNonce + miningTasks.Length;
@@ -96,7 +103,7 @@ namespace Blockchain.NET.Core.Mining
                                 BlockchainConsole.WriteLive($"MINING BLOCK - ELAPSED TIME: {currentElapsedTime.TotalSeconds} Seconds, DIFFICULTY: {difficulty}, HASH RATE: {Convert.ToInt64(totalHashesCounter / currentElapsedTime.TotalSeconds)}/Seconds");
                             }
                         }
-                        if (!string.IsNullOrEmpty(taskHash))
+                        if (taskHash != null)
                         {
                             Nonce = startNonce;
                             _isMining = false;
@@ -110,12 +117,12 @@ namespace Blockchain.NET.Core.Mining
             }
         }
 
-        public string GenerateHash(long nonce = -1)
+        public byte[] GenerateHash(long nonce = -1)
         {
             if (nonce < 0)
-                return HashHelper.Sha256(Height + PreviousHash + TimeStamp + Nonce + Difficulty + MerkleTreeHash);
+                return HashHelper.Sha256Bytes(Height + PreviousHash + TimeStamp + Nonce + Difficulty + MerkleTreeHash);
             else
-                return HashHelper.Sha256(Height + PreviousHash + TimeStamp + nonce + Difficulty + MerkleTreeHash);
+                return HashHelper.Sha256Bytes(Height + PreviousHash + TimeStamp + nonce + Difficulty + MerkleTreeHash);
         }
 
         public void StopMining()
@@ -125,7 +132,7 @@ namespace Blockchain.NET.Core.Mining
 
         public override string ToString()
         {
-            return $"BlockNumber: {Height}, Hash: {GenerateHash()}";
+            return $"BlockNumber: {Height}, Hash: {HashHelper.ByteArrayToHexString(GenerateHash())}";
         }
 
         public string ToJson()

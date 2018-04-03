@@ -23,6 +23,21 @@ namespace Blockchain.NET.Blockchain.Network
         public bool IsSyncing { get; set; }
         private static Random rnd = new Random();
 
+        private bool _isSynced;
+        public bool IsSynced
+        {
+            get { return _isSynced; }
+            set
+            {
+                _isSynced = value;
+                if (!_isSynced)
+                {
+                    if (_blockChain.NextBlock != null)
+                        _blockChain.NextBlock.StopMining();
+                }
+            }
+        }
+
         private NodeList _nodeList;
         private List<NodeConnection> _connections;
 
@@ -119,17 +134,21 @@ namespace Blockchain.NET.Blockchain.Network
                 }
                 if (resultRemoteChainStates.Count > 0)
                 {
+                    IsSynced = false;
                     var from = nextBlockHeight;
                     var to = resultRemoteChainStates.Select(t => t.Item2).Max();
                     loadBlocks(resultRemoteChainStates, from, to);
                 }
                 else
+                {
+                    IsSynced = true;
                     for (int i = 0; i < 8; i++)
                     {
                         await Task.Delay(1000);
                         if (!IsSyncing)
                             break;
                     }
+                }
             }
         }
 
@@ -231,6 +250,7 @@ namespace Blockchain.NET.Blockchain.Network
                     }
                     if (notSynnchronChains.Count > 0)
                     {
+                        IsSynced = false;
                         syncBlockchains(notSynnchronChains, lastBlock);
                     }
                 }
@@ -295,7 +315,7 @@ namespace Blockchain.NET.Blockchain.Network
                                     }
                                 }
                             }
-                            catch(Exception exc)
+                            catch (Exception exc)
                             {
 
                             }

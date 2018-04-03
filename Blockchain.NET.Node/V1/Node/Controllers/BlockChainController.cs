@@ -26,9 +26,9 @@ namespace Blockchain.NET.Node.V1.Node.Controllers
         }
 
         [HttpGet("[action]")]
-        public JsonResult LastBlockHeight()
+        public IActionResult LastBlockHeight()
         {
-            return Json(Program.BlockChain.NextBlockHeight - 1);
+            return Content((Program.BlockChain.NextBlockHeight - 1).ToString());
         }
 
         [HttpGet("[action]")]
@@ -44,9 +44,9 @@ namespace Blockchain.NET.Node.V1.Node.Controllers
         }
 
         [HttpGet("[action]/{blockHeight}")]
-        public JsonResult GetBlockchainHash(int blockHeight)
+        public IActionResult GetBlockchainHash(int blockHeight)
         {
-            return Json(Program.BlockChain.BlockchainHash(blockHeight));
+            return Content(Program.BlockChain.BlockchainHash(blockHeight));
         }
 
         [HttpGet("[action]")]

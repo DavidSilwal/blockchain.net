@@ -22,7 +22,7 @@ namespace Blockchain.NET.Blockchain
     public class BlockChain
     {
         public int DifficultyCorrectureInterval { get; private set; } = 512;
-        public int DifficultyTimeTarget { get; private set; } = 15;
+        public int DifficultyTimeTarget { get; private set; } = 30;
         public int NextBlockHeight
         {
             get

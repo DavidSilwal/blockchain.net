@@ -28,9 +28,9 @@ namespace Blockchain.NET.Node
             BlockChain = new BlockChain(Wallet);
             //BlockChain.StartSyncronizing();
 
-            //BlockChain.StartMining();
+            BlockChain.StartMining();
 
-            Console.WriteLine($"Blockchain is {(BlockChain.IsChainValid() ? "valid" : "not valid")}");
+            //Console.WriteLine($"Blockchain is {(BlockChain.IsChainValid() ? "valid" : "not valid")}");
 
             //NetworkConnector.IsMainNode = true;
 

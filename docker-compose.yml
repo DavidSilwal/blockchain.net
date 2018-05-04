@@ -4,7 +4,7 @@ services:
   blockchain.net.node:
     image: blockchain.net.node
     volumes:
-       - D:\Docker\Blockchain.NET\Data:/app/Data
+       - D:\docker\blockchaindotnet:/app/Data
     ports:
       - 5001:80
     build:

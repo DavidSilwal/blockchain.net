@@ -2,7 +2,7 @@
 A blockchain implementation based on the dotnet standard 2.0
 
 ## Projektabgabe
-* 8 Juni 2017
+* 8 Juni 2018
   * Präsentation und Abgabe (Code und Projektbericht)
 
 ## Projekt
@@ -10,13 +10,13 @@ A blockchain implementation based on the dotnet standard 2.0
 * Projektarbeit in 2er- oder 3er-Teams
 * Erstellen einer kleinen (3 Screens) dynamischen Webapplikation (Prototyp und Umsetzung)
 
-### Projektbericht (Abgabe bis 8. Juni 2017):
+### Projektbericht (Abgabe bis 8. Juni 2018):
 * Einführung: Beschreibung der Projektidee
 * Spezifikation mittels Papierprototyp
 * Arbeitsjournal
 * Fazit (Technisch und Teamwork)
 
-### Präsentation und Demo (8. Juni 2017:)
+### Präsentation und Demo (8. Juni 2018:)
 * 5 Minuten Präsentation (inkl. Demo).
 * Live-Demonstration der Applikation.
 * Vertieftes Eingehen auf einen technischen Aspekt und seiner Umsetzung.

@@ -2,7 +2,7 @@
 A blockchain implementation based on the dotnet standard 2.0
 
 ## Projektabgabe
-* 8. Juni 2017
+* 8 Juni 2017
   * Präsentation und Abgabe (Code und Projektbericht)
 
 ## Projekt
